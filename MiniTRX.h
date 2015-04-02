@@ -3,10 +3,11 @@
 
 #include <QtWidgets/QWidget>
 
-class QLineEdit;
-class QCheckBox;
 class QPushButton;
-class QRadioButton;
+class QProgressBar;
+class QSlider;
+class Indicator;
+class CPlotter;
 
 class MiniTRX: public QWidget
 {
@@ -17,14 +18,22 @@ public:
   virtual ~MiniTRX();
 
 private slots:
-/*
-  virtual void on_Hello_clicked();
-  virtual void on_Quit_clicked();
-  virtual void on_Scale_stateChanged();
-*/
+  virtual void on_IndicatorRX_changed(int freq);
+  virtual void on_FrequencyRX_changed(int freq);
+  virtual void on_IndicatorFFT_changed(int freq);
+  virtual void on_Range_changed(int range);
+  virtual void on_Offset_changed(int offset);
+
 private:
 
-  QWidget *fSpectrum;
+  Indicator *fIndicatorRX;
+  Indicator *fIndicatorTX;
+  Indicator *fIndicatorFFT;
+  QProgressBar *fLevelRX;
+  QProgressBar *fLevelTX;
+  QSlider *fRange;
+  QSlider *fOffset;
+  CPlotter *fPlotter;
 
 };
 

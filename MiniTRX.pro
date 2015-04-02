@@ -1,5 +1,5 @@
 TEMPLATE = app
 QT += uitools
 FORMS = MiniTRX.ui
-HEADERS = MiniTRX.h
-SOURCES = MiniTRX.cpp main.cpp
+HEADERS = MiniTRX.h Indicator.h plotter.h
+SOURCES = MiniTRX.cpp Indicator.cpp plotter.cpp main.cpp
