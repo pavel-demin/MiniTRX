@@ -1,8 +1,7 @@
 TARGET = MiniTRX-server
 QT += core websockets
 QT -= gui
-CONFIG += console
-CONFIG -= app_bundle
+CONFIG += console debug_and_release
 TEMPLATE = app
 QMAKE_CFLAGS = -fomit-frame-pointer -fstrict-aliasing -ffast-math
 INCLUDEPATH += wdsp /opt/fftw/fftw-3.2.2-armhf/include
