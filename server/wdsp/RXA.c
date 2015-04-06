@@ -26,29 +26,31 @@ warren@wpratt.com
 
 #include "comm.h"
 
-void create_rxa (int channel)
+void create_rxa (int channel, int size, int rate)
 {
+	rxa[channel].size = size;
+	rxa[channel].rate = rate;
 	rxa[channel].mode = RXA_LSB;
-	rxa[channel].inbuff  = (float *) malloc0 (1 * ch[channel].dsp_insize  * sizeof (complex));
-	rxa[channel].outbuff = (float *) malloc0 (1 * ch[channel].dsp_outsize * sizeof (complex));
-	rxa[channel].midbuff = (float *) malloc0 (2 * ch[channel].dsp_size    * sizeof (complex));
+	rxa[channel].inbuff  = (float *) malloc0 (1 * rxa[channel].size * sizeof (complex));
+	rxa[channel].outbuff = (float *) malloc0 (1 * rxa[channel].size * sizeof (complex));
+	rxa[channel].midbuff = (float *) malloc0 (2 * rxa[channel].size * sizeof (complex));
 
 	// signal generator
 	rxa[channel].gen0.p = create_gen (
 		0,												// run
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// input buffer
 		rxa[channel].midbuff,							// output buffer
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].rate,							// sample rate
 		2);												// mode
 
 	// adc (input) meter
 	rxa[channel].adcmeter.p = create_meter (
 		1,												// run
 		0,												// optional pointer to another 'run'
-		ch[channel].dsp_size,							// size
+		rxa[channel].size,							// size
 		rxa[channel].midbuff,							// pointer to buffer
-		ch[channel].dsp_rate,							// samplerate
+		rxa[channel].rate,							// samplerate
 		0.100,											// averaging time constant
 		0.100,											// peak decay time constant
 		rxa[channel].meter,								// result vector
@@ -61,12 +63,12 @@ void create_rxa (int channel)
 	rxa[channel].bp0.p = create_bandpass (
 		1,												// run - always ON
 		0,												// position
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
 		-4150.0,										// lower filter frequency
 		-150.0,											// upper filter frequency
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].rate,							// sample rate
 		1,												// wintype
 		1.0);											// gain
 
@@ -74,9 +76,9 @@ void create_rxa (int channel)
 	rxa[channel].smeter.p = create_meter (
 		1,												// run
 		0,												// optional pointer to another 'run'
-		ch[channel].dsp_size,							// size
+		rxa[channel].size,							// size
 		rxa[channel].midbuff,							// pointer to buffer
-		ch[channel].dsp_rate,							// samplerate
+		rxa[channel].rate,							// samplerate
 		0.100,											// averaging time constant
 		0.100,											// peak decay time constant
 		rxa[channel].meter,								// result vector
@@ -88,11 +90,11 @@ void create_rxa (int channel)
 	// AM squelch
 	rxa[channel].amsq.p = create_amsq (
 		0,												// run
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// pointer to signal input buffer used by xamsq
 		rxa[channel].midbuff,							// pointer to signal output buffer used by xamsq
 		rxa[channel].midbuff,							// pointer to trigger buffer that xamsqcap will capture
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].rate,							// sample rate
 		0.010,											// time constant for averaging signal level
 		0.070,											// signal up transition time
 		0.070,											// signal down transition time
@@ -105,13 +107,13 @@ void create_rxa (int channel)
 	// AM demod
 	rxa[channel].amd.p = create_amd (
 		0,												// run - OFF by default
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
 		0,												// mode:  0->AM, 1->SAM
 		1,												// levelfade:  0->OFF, 1->ON
 		0,												// sideband mode:  0->OFF
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].rate,							// sample rate
 		-2000.0,										// minimum lock frequency
 		+2000.0,										// maximum lock frequency
 		1.0,											// zeta
@@ -123,7 +125,7 @@ void create_rxa (int channel)
 	rxa[channel].anf.p = create_anf (
 		0,												// run - OFF by default
 		1,												// position
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
 		ANF_DLINE_SIZE,									// dline_size
@@ -143,7 +145,7 @@ void create_rxa (int channel)
 	rxa[channel].anr.p = create_anr (
 		0,												// run - OFF by default
 		1,												// position
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
 		ANR_DLINE_SIZE,									// dline_size
@@ -164,12 +166,12 @@ void create_rxa (int channel)
 	rxa[channel].emnr.p = create_emnr (
 		1,												// run
 		1,												// position
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// input buffer
 		rxa[channel].midbuff,							// output buffer
 		4096,											// FFT size
 		4,												// overlap
-		ch[channel].dsp_rate,							// samplerate
+		rxa[channel].rate,							// samplerate
 		0,												// window type
 		1.0,											// gain
 		1,												// gain method
@@ -183,8 +185,8 @@ void create_rxa (int channel)
 		1,												// peakmode = envelope
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
-		ch[channel].dsp_size,							// buffer size
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].size,							// buffer size
+		rxa[channel].rate,							// sample rate
 		0.001,											// tau_attack
 		0.250,											// tau_decay
 		4,												// n_tau
@@ -206,9 +208,9 @@ void create_rxa (int channel)
 	rxa[channel].agcmeter.p = create_meter (
 		1,												// run
 		0,												// optional pointer to another 'run'
-		ch[channel].dsp_size,							// size
+		rxa[channel].size,							// size
 		rxa[channel].midbuff,							// pointer to buffer
-		ch[channel].dsp_rate,							// samplerate
+		rxa[channel].rate,							// samplerate
 		0.100,											// averaging time constant
 		0.100,											// peak decay time constant
 		rxa[channel].meter,								// result vector
@@ -221,32 +223,32 @@ void create_rxa (int channel)
 	rxa[channel].bp1.p = create_bandpass (
 		1,												// run - used only with ( AM || ANF || ANR || EMNR)
 		1,												// position
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
 		-4150.0,										// lower filter frequency
 		-150.0,											// upper filter frequency
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].rate,							// sample rate
 		1,												// wintype
 		1.0);											// gain
 
 	// carrier block
 	rxa[channel].cbl.p = create_cbl (
 		0,												// run - needed only if set to ON
-		ch[channel].dsp_size,							// buffer size
+		rxa[channel].size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
 		0,												// mode
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].rate,							// sample rate
 		0.02);											// tau
 
 	// peaking filter
 	rxa[channel].speak.p = create_speak (
 		0,												// run
-		ch[channel].dsp_size,							// buffer size,
+		rxa[channel].size,							// buffer size,
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
-		ch[channel].dsp_rate,							// sample rate
+		rxa[channel].rate,							// sample rate
 		600.0,											// center frequency
 		100.0,											// bandwidth
 		2.0,											// gain
@@ -261,10 +263,10 @@ void create_rxa (int channel)
 		float def_gain[2] = {1.0, 1.0};
 		rxa[channel].mpeak.p = create_mpeak (
 			0,											// run
-			ch[channel].dsp_size,						// size
+			rxa[channel].size,						// size
 			rxa[channel].midbuff,						// pointer to input buffer
 			rxa[channel].midbuff,						// pointer to output buffer
-			ch[channel].dsp_rate,						// sample rate
+			rxa[channel].rate,						// sample rate
 			2,											// number of peaking filters
 			def_enable,									// enable vector
 			def_freq,									// frequency vector
@@ -277,7 +279,7 @@ void create_rxa (int channel)
 	rxa[channel].panel.p = create_panel (
 		channel,										// channel number
 		1,												// run
-		ch[channel].dsp_size,							// size
+		rxa[channel].size,							// size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
 		4.0,											// gain1
@@ -285,23 +287,10 @@ void create_rxa (int channel)
 		1.0,											// gain2Q
 		3,												// 3 for I and Q
 		0);												// no copy
-
-	// resample
-	rxa[channel].rsmpout.p = create_resample (
-		1,												// run
-		ch[channel].dsp_size,							// input buffer size			 
-		rxa[channel].midbuff,							// pointer to input buffer
-		rxa[channel].outbuff,							// pointer to output buffer
-		ch[channel].dsp_rate,							// input sample rate
-		ch[channel].out_rate,							// output sample rate
-		0.0,											// select cutoff automatically
-		0,												// select ncoef automatically
-		1.0);											// gain
 }
 
 void destroy_rxa (int channel)
 {
-	destroy_resample (rxa[channel].rsmpout.p);
 	destroy_panel (rxa[channel].panel.p);
 	destroy_mpeak (rxa[channel].mpeak.p);
 	destroy_speak (rxa[channel].speak.p);
@@ -325,9 +314,9 @@ void destroy_rxa (int channel)
 
 void flush_rxa (int channel)
 {
-	memset (rxa[channel].inbuff,  0, 1 * ch[channel].dsp_insize  * sizeof (complex));
-	memset (rxa[channel].outbuff, 0, 1 * ch[channel].dsp_outsize * sizeof (complex));
-	memset (rxa[channel].midbuff, 0, 2 * ch[channel].dsp_size    * sizeof (complex));
+	memset (rxa[channel].inbuff,  0, 1 * rxa[channel].size * sizeof (complex));
+	memset (rxa[channel].outbuff, 0, 1 * rxa[channel].size * sizeof (complex));
+	memset (rxa[channel].midbuff, 0, 2 * rxa[channel].size * sizeof (complex));
 	flush_gen (rxa[channel].gen0.p);
 	flush_meter (rxa[channel].adcmeter.p);
 	flush_bandpass (rxa[channel].bp0.p);
@@ -344,7 +333,6 @@ void flush_rxa (int channel)
 	flush_speak (rxa[channel].speak.p);
 	flush_mpeak (rxa[channel].mpeak.p);
 	flush_panel (rxa[channel].panel.p);
-	flush_resample (rxa[channel].rsmpout.p);
 }
 
 void xrxa (int channel)
@@ -370,7 +358,6 @@ void xrxa (int channel)
 	xmpeak (rxa[channel].mpeak.p);
 	xpanel (rxa[channel].panel.p);
 	xamsq (rxa[channel].amsq.p);
-	xresample (rxa[channel].rsmpout.p);
 }
 
 /********************************************************************************************************

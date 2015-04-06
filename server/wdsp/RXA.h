@@ -61,16 +61,14 @@ struct _rxa
 	float* inbuff;
 	float* outbuff;
 	float* midbuff;
+	int size;
+	int rate;
 	int mode;
 	float meter[RXA_METERTYPE_LAST];
 	struct
 	{
 		METER p;
 	} smeter, adcmeter, agcmeter;
-	struct
-	{
-		RESAMPLE p;
-	} rsmpout;
 	struct
 	{
 		GEN p;
@@ -122,7 +120,7 @@ struct _rxa
 
 } rxa[MAX_CHANNELS];
 
-extern void create_rxa (int channel);
+extern void create_rxa (int channel, int size, int rate);
 
 extern void destroy_rxa (int channel);
 

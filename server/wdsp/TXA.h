@@ -68,16 +68,14 @@ struct _txa
 	float* inbuff;
 	float* outbuff;
 	float* midbuff;
+	int size;
+	int rate;
 	int mode;
 	float meter[TXA_METERTYPE_LAST];
 	struct
 	{
 		METER p;
 	} micmeter, lvlrmeter, compmeter, alcmeter, outmeter;
-	struct
-	{
-		RESAMPLE p;
-	} rsmpin;
 	struct
 	{
 		PANEL p;
@@ -120,7 +118,7 @@ struct _txa
 	} gen0, gen1;
 } txa[MAX_CHANNELS];
 
-extern void create_txa (int channel);
+extern void create_txa (int channel, int size, int rate);
 
 extern void destroy_txa (int channel);
 

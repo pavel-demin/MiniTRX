@@ -24,12 +24,31 @@ warren@wpratt.com
 
 */
 
+#ifndef _comm_h
+#define _comm_h
+
+// channel definitions
+#define MAX_CHANNELS    2       // maximum number of supported channels
+
+// math definitions
+#define PI              3.1415926535897932
+#define TWOPI           6.2831853071795864
+
+#define min(x,y) (x<y?x:y)
+#define max(x,y) (x<y?y:x)
+
+typedef float complex[2];
+
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
 #include <time.h>
 #include <fftw3.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #include "amd.h"
 #include "ammod.h"
@@ -38,7 +57,6 @@ warren@wpratt.com
 #include "anr.h"
 #include "bandpass.h"
 #include "cblock.h"
-#include "channel.h"
 #include "compress.h"
 #include "delay.h"
 #include "div.h"
@@ -56,22 +74,13 @@ warren@wpratt.com
 #include "nobII.h"
 #include "osctrl.h"
 #include "patchpanel.h"
-#include "resample.h"
-#include "RXA.h"
 #include "shift.h"
-#include "TXA.h"
 #include "utilities.h"
 #include "wcpAGC.h"
+#include "RXA.h"
+#include "TXA.h"
 
-// channel definitions
-#define MAX_CHANNELS	2	// maximum number of supported channels
-
-// math definitions
-#define PI		3.1415926535897932
-#define TWOPI		6.2831853071795864
-
-#define min(x,y) (x<y?x:y)
-#define max(x,y) (x<y?y:x)
-
-// miscellaneous
-typedef float complex[2];
+#ifdef __cplusplus
+}
+#endif
+#endif

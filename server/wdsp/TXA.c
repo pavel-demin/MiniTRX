@@ -26,36 +26,27 @@ warren@wpratt.com
 
 #include "comm.h"
 
-void create_txa (int channel)
+void create_txa (int channel, int size, int rate)
 {
+	txa[channel].size = size;
+	txa[channel].rate = rate;
 	txa[channel].mode = TXA_LSB;
-	txa[channel].inbuff  = (float *) malloc0 (1 * ch[channel].dsp_insize  * sizeof (complex));
-	txa[channel].outbuff = (float *) malloc0 (1 * ch[channel].dsp_outsize * sizeof (complex));
-	txa[channel].midbuff = (float *) malloc0 (2 * ch[channel].dsp_size    * sizeof (complex));
-
-	txa[channel].rsmpin.p = create_resample (
-		1,											// run
-		ch[channel].dsp_insize,						// input buffer size
-		txa[channel].inbuff,						// pointer to input buffer
-		txa[channel].midbuff,						// pointer to output buffer
-		ch[channel].in_rate,						// input sample rate
-		ch[channel].dsp_rate, 						// output sample rate
-		0.0,										// select cutoff automatically
-		0,											// select ncoef automatically
-		1.0);										// gain
+	txa[channel].inbuff  = (float *) malloc0 (1 * txa[channel].size * sizeof (complex));
+	txa[channel].outbuff = (float *) malloc0 (1 * txa[channel].size * sizeof (complex));
+	txa[channel].midbuff = (float *) malloc0 (2 * txa[channel].size * sizeof (complex));
 
 	txa[channel].gen0.p = create_gen (
 		1,											// run
-		ch[channel].dsp_size,						// buffer size
+		txa[channel].size,						// buffer size
 		txa[channel].midbuff,						// input buffer
 		txa[channel].midbuff,						// output buffer
-		ch[channel].dsp_rate,						// sample rate
+		txa[channel].rate,						// sample rate
 		2);											// mode
 	
 	txa[channel].panel.p = create_panel (
 		channel,									// channel number
 		1,											// run
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer
 		1.0,										// gain1
@@ -67,9 +58,9 @@ void create_txa (int channel)
 	txa[channel].micmeter.p = create_meter (
 		1,											// run
 		0,											// optional pointer to another 'run'
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to buffer
-		ch[channel].dsp_rate,						// samplerate
+		txa[channel].rate,						// samplerate
 		0.100,										// averaging time constant
 		0.100,										// peak decay time constant
 		txa[channel].meter,							// result vector
@@ -80,11 +71,11 @@ void create_txa (int channel)
 
 	txa[channel].amsq.p = create_amsq (
 		1,											// run
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// input buffer
 		txa[channel].midbuff,						// output buffer
 		txa[channel].midbuff,						// trigger buffer
-		ch[channel].dsp_rate,						// sample rate
+		txa[channel].rate,						// sample rate
 		0.010,										// time constant for averaging signal
 		0.004,										// up-slew time
 		0.004,										// down-slew time
@@ -97,10 +88,10 @@ void create_txa (int channel)
 	txa[channel].preemph.p = create_emph (
 		1,											// run
 		1,											// position
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// input buffer
 		txa[channel].midbuff,						// output buffer,
-		ch[channel].dsp_rate,						// sample rate
+		txa[channel].rate,						// sample rate
 		0,											// pre-emphasis type
 		300.0,										// f_low
 		3000.0);									// f_high
@@ -111,8 +102,8 @@ void create_txa (int channel)
 		0,											// 0 for max(I,Q), 1 for envelope
 		txa[channel].midbuff,						// input buff pointer
 		txa[channel].midbuff,						// output buff pointer
-		ch[channel].dsp_size,						// io_buffsize
-		ch[channel].dsp_rate,						// sample rate
+		txa[channel].size,						// io_buffsize
+		txa[channel].rate,						// sample rate
 		0.001,										// tau_attack
 		0.500,										// tau_decay
 		6,											// n_tau
@@ -133,9 +124,9 @@ void create_txa (int channel)
 	txa[channel].lvlrmeter.p = create_meter (
 		1,											// run
 		&(txa[channel].leveler.p->run),				// pointer to leveler 'run'
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to buffer
-		ch[channel].dsp_rate,						// samplerate
+		txa[channel].rate,						// samplerate
 		0.100,										// averaging time constant
 		0.100,										// peak decay time constant
 		txa[channel].meter,							// result vector
@@ -147,19 +138,19 @@ void create_txa (int channel)
 	txa[channel].bp0.p = create_bandpass (
 		1,											// always runs
 		0,											// position
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer 
 		32.0,										// low freq cutoff
 		23000.0,									// high freq cutoff
-		ch[channel].dsp_rate,						// samplerate
+		txa[channel].rate,						// samplerate
 		1,											// wintype
 		2.0);										// gain
 
 	txa[channel].pfgain0.p = create_gain (
 		1,											// run - depends upon mode
 		0,											// 
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer
 		0.5,										// Igain
@@ -167,7 +158,7 @@ void create_txa (int channel)
 
 	txa[channel].compressor.p = create_compressor (
 		1,											// run - OFF by default
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer
 		3.0);										// gain
@@ -175,19 +166,19 @@ void create_txa (int channel)
 	txa[channel].bp1.p = create_bandpass (
 		1,											// ONLY RUNS WHEN COMPRESSOR IS USED
 		0,											// position
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer 
 		32.0,										// low freq cutoff
 		23000.0,									// high freq cutoff
-		ch[channel].dsp_rate,						// samplerate
+		txa[channel].rate,						// samplerate
 		1,											// wintype
 		2.0);										// gain	
 
 	txa[channel].pfgain1.p = create_gain (
 		1,											// run - depends upon mode
 		&(txa[channel].compressor.p->run),			// run only if compressor is on
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer
 		0.5,										// Igain
@@ -196,30 +187,30 @@ void create_txa (int channel)
 
 	txa[channel].osctrl.p = create_osctrl (
 		1,											// run
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// input buffer
 		txa[channel].midbuff,						// output buffer
-		ch[channel].dsp_rate,						// sample rate
+		txa[channel].rate,						// sample rate
 		1.95);										// gain for clippings
 
 	txa[channel].bp2.p = create_bandpass (
 		1,											// ONLY RUNS WHEN COMPRESSOR IS USED
 		0,											// position
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer 
 		32.0,										// low freq cutoff
 		23000.0,									// high freq cutoff
-		ch[channel].dsp_rate,						// samplerate
+		txa[channel].rate,						// samplerate
 		1,											// wintype
 		1.0);										// gain
 
 	txa[channel].compmeter.p = create_meter (
 		1,											// run
 		&(txa[channel].compressor.p->run),			// pointer to compressor 'run'
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to buffer
-		ch[channel].dsp_rate,						// samplerate
+		txa[channel].rate,						// samplerate
 		0.100,										// averaging time constant
 		0.100,										// peak decay time constant
 		txa[channel].meter,							// result vector
@@ -234,8 +225,8 @@ void create_txa (int channel)
 		1,											// 0 for max(I,Q), 1 for envelope
 		txa[channel].midbuff,						// input buff pointer
 		txa[channel].midbuff,						// output buff pointer
-		ch[channel].dsp_size,						// io_buffsize
-		ch[channel].dsp_rate,						// sample rate
+		txa[channel].size,						// io_buffsize
+		txa[channel].rate,						// sample rate
 		0.001,										// tau_attack
 		0.010,										// tau_decay
 		6,											// n_tau
@@ -256,25 +247,25 @@ void create_txa (int channel)
 	txa[channel].ammod.p = create_ammod (
 		1,											// run - OFF by default
 		0,											// mode:  0=>AM, 1=>DSB
-		ch[channel].dsp_size,						// size
+		txa[channel].size,						// size
 		txa[channel].midbuff,						// pointer to input buffer
 		txa[channel].midbuff,						// pointer to output buffer
 		0.5);										// carrier level
 
 	txa[channel].gen1.p = create_gen (
 		0,											// run
-		ch[channel].dsp_size,						// buffer size
+		txa[channel].size,						// buffer size
 		txa[channel].midbuff,						// input buffer
 		txa[channel].midbuff,						// output buffer
-		ch[channel].dsp_rate,						// sample rate
+		txa[channel].rate,						// sample rate
 		0);											// mode
 
 	txa[channel].outmeter.p = create_meter (
 		1,											// run
 		0,											// optional pointer to another 'run'
-		ch[channel].dsp_outsize,					// size
+		txa[channel].size,						// size
 		txa[channel].outbuff,						// pointer to buffer
-		ch[channel].out_rate,						// samplerate
+		txa[channel].rate,						// samplerate
 		0.100,										// averaging time constant
 		0.100,										// peak decay time constant
 		txa[channel].meter,							// result vector
@@ -307,7 +298,6 @@ void destroy_txa (int channel)
 	destroy_meter (txa[channel].micmeter.p);
 	destroy_panel (txa[channel].panel.p);
 	destroy_gen (txa[channel].gen0.p);
-	destroy_resample (txa[channel].rsmpin.p);
 	free (txa[channel].midbuff);
 	free (txa[channel].outbuff);
 	free (txa[channel].inbuff);
@@ -315,10 +305,9 @@ void destroy_txa (int channel)
 
 void flush_txa (int channel)
 {
-	memset (txa[channel].inbuff,  0, 1 * ch[channel].dsp_insize  * sizeof (complex));
-	memset (txa[channel].outbuff, 0, 1 * ch[channel].dsp_outsize * sizeof (complex));
-	memset (txa[channel].midbuff, 0, 2 * ch[channel].dsp_size    * sizeof (complex));
-	flush_resample (txa[channel].rsmpin.p);
+	memset (txa[channel].inbuff,  0, 1 * txa[channel].size * sizeof (complex));
+	memset (txa[channel].outbuff, 0, 1 * txa[channel].size * sizeof (complex));
+	memset (txa[channel].midbuff, 0, 2 * txa[channel].size * sizeof (complex));
 	flush_gen (txa[channel].gen0.p);
 	flush_panel (txa[channel].panel.p);
 	flush_meter (txa[channel].micmeter.p);
@@ -342,7 +331,6 @@ void flush_txa (int channel)
 
 void xtxa (int channel)
 {
-	xresample (txa[channel].rsmpin.p);
 	xgen (txa[channel].gen0.p);
 	xpanel (txa[channel].panel.p);
 	xmeter (txa[channel].micmeter.p);
