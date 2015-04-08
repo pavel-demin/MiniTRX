@@ -6,6 +6,9 @@
 class QPushButton;
 class QProgressBar;
 class QSlider;
+class QComboBox;
+class QAudioOutput;
+class QAudioInput;
 class Indicator;
 class CPlotter;
 
@@ -26,14 +29,22 @@ private slots:
 
 private:
 
-  Indicator *fIndicatorRX;
-  Indicator *fIndicatorTX;
-  Indicator *fIndicatorFFT;
-  QProgressBar *fLevelRX;
-  QProgressBar *fLevelTX;
-  QSlider *fRange;
-  QSlider *fOffset;
-  CPlotter *fPlotter;
+  Indicator *m_IndicatorRX;
+  Indicator *m_IndicatorTX;
+  Indicator *m_IndicatorFFT;
+  QProgressBar *m_LevelRX;
+  QProgressBar *m_LevelTX;
+  QSlider *m_Range;
+  QSlider *m_Offset;
+  CPlotter *m_Plotter;
+
+  QComboBox *m_DeviceRX;
+  QComboBox *m_DeviceTX;
+  QAudioOutput *m_AudioOutput;
+  QAudioInput *m_AudioInput;
+
+  bool m_pullMode;
+  QByteArray m_buffer;
 
 };
 

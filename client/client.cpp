@@ -2,12 +2,15 @@
 
 #include <iostream>
 
-#include <QtGui>
+#include <QtGui/QtGui>
 #include <QtUiTools/QUiLoader>
 #include <QtCore/QFile>
 #include <QtWidgets/QVBoxLayout>
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QSlider>
+#include <QtWidgets/QComboBox>
+#include <QtMultimedia/QAudioDeviceInfo>
+#include <QtMultimedia/QAudioOutput>
 
 #include "client.h"
 #include "indicator.h"
@@ -43,8 +46,8 @@ public:
 //------------------------------------------------------------------------------
 
 Client::Client(QWidget *parent):
-  QWidget(parent), fIndicatorRX(0), fIndicatorTX(0), fIndicatorFFT(0),
-  fLevelRX(0), fLevelTX(0), fRange(0), fOffset(0), fPlotter(0)
+  QWidget(parent), m_IndicatorRX(0), m_IndicatorTX(0), m_IndicatorFFT(0),
+  m_LevelRX(0), m_LevelTX(0), m_Range(0), m_Offset(0), m_Plotter(0)
 {
   CustomUiLoader loader;
   QString buffer;
@@ -54,43 +57,61 @@ Client::Client(QWidget *parent):
   QWidget *formWidget = loader.load(&file, this);
   file.close();
 
-  fIndicatorRX = findChild<Indicator *>("IndicatorRX");
-  fIndicatorTX = findChild<Indicator *>("IndicatorTX");
-  fIndicatorFFT = findChild<Indicator *>("IndicatorFFT");
+  m_IndicatorRX = findChild<Indicator *>("IndicatorRX");
+  m_IndicatorTX = findChild<Indicator *>("IndicatorTX");
+  m_IndicatorFFT = findChild<Indicator *>("IndicatorFFT");
 
-  fLevelRX = findChild<QProgressBar *>("LevelRX");
-  fLevelTX = findChild<QProgressBar *>("LevelTX");
+  m_LevelRX = findChild<QProgressBar *>("LevelRX");
+  m_LevelTX = findChild<QProgressBar *>("LevelTX");
 
-  fRange = findChild<QSlider *>("Range");
-  fOffset = findChild<QSlider *>("Offset");
+  m_Range = findChild<QSlider *>("Range");
+  m_Offset = findChild<QSlider *>("Offset");
 
-  fPlotter = findChild<CPlotter *>("Plotter");
+  m_Plotter = findChild<CPlotter *>("Plotter");
 
-	connect(fIndicatorRX, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorRX_changed(int)));
-	connect(fPlotter, SIGNAL(NewDemodFreq(int)), this, SLOT(on_FrequencyRX_changed(int)));
-	connect(fIndicatorFFT, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorFFT_changed(int)));
-	connect(fRange, SIGNAL(valueChanged(int)), this, SLOT(on_Range_changed(int)));
-	connect(fOffset, SIGNAL(valueChanged(int)), this, SLOT(on_Offset_changed(int)));
+	connect(m_IndicatorRX, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorRX_changed(int)));
+	connect(m_Plotter, SIGNAL(NewDemodFreq(int)), this, SLOT(on_FrequencyRX_changed(int)));
+	connect(m_IndicatorFFT, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorFFT_changed(int)));
+	connect(m_Range, SIGNAL(valueChanged(int)), this, SLOT(on_Range_changed(int)));
+	connect(m_Offset, SIGNAL(valueChanged(int)), this, SLOT(on_Offset_changed(int)));
 
-  fIndicatorRX->setValue(600000);
-  fIndicatorRX->setFrameShape(QFrame::Panel);
-  fIndicatorRX->setFrameShadow(QFrame::Sunken);
-  fIndicatorTX->setValue(600000);
-  fIndicatorTX->setFrameShape(QFrame::Panel);
-  fIndicatorTX->setFrameShadow(QFrame::Sunken);
-  fIndicatorFFT->setValue(600000);
-  fIndicatorFFT->setFrameShape(QFrame::Panel);
-  fIndicatorFFT->setFrameShadow(QFrame::Sunken);
-  fIndicatorFFT->setDeltaMin(1000);
+  m_IndicatorRX->setValue(600000);
+  m_IndicatorRX->setFrameShape(QFrame::Panel);
+  m_IndicatorRX->setFrameShadow(QFrame::Sunken);
+  m_IndicatorTX->setValue(600000);
+  m_IndicatorTX->setFrameShape(QFrame::Panel);
+  m_IndicatorTX->setFrameShadow(QFrame::Sunken);
+  m_IndicatorFFT->setValue(600000);
+  m_IndicatorFFT->setFrameShape(QFrame::Panel);
+  m_IndicatorFFT->setFrameShadow(QFrame::Sunken);
+  m_IndicatorFFT->setDeltaMin(1000);
+
+  m_DeviceRX = findChild<QComboBox *>("DeviceRX");
+  const QAudioDeviceInfo &defaultOutputDevice = QAudioDeviceInfo::defaultOutputDevice();
+  m_DeviceRX->addItem(defaultOutputDevice.deviceName(), qVariantFromValue(defaultOutputDevice));
+  foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioOutput))
+  {
+    if(device != defaultOutputDevice) m_DeviceRX->addItem(device.deviceName(), qVariantFromValue(device));
+  }
+  connect(m_DeviceRX, SIGNAL(activated(int)), this, SLOT(on_DeviceTX_activated(int)));
+
+  m_DeviceTX = findChild<QComboBox *>("DeviceTX");
+  const QAudioDeviceInfo &defaultInputDevice = QAudioDeviceInfo::defaultInputDevice();
+  m_DeviceTX->addItem(defaultInputDevice.deviceName(), qVariantFromValue(defaultInputDevice));
+  foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioInput))
+  {
+    if(device != defaultInputDevice) m_DeviceTX->addItem(device.deviceName(), qVariantFromValue(device));
+  }
+  connect(m_DeviceTX, SIGNAL(activated(int)), this, SLOT(on_DeviceTX_activated(int)));
 
   QMetaObject::connectSlotsByName(this);
 
   QVBoxLayout *layout = new QVBoxLayout;
+  layout->setContentsMargins(0, 0, 0, 0);
   layout->addWidget(formWidget);
   setLayout(layout);
 
   setFixedSize(layout->maximumSize());
-
 }
 
 //------------------------------------------------------------------------------
@@ -113,23 +134,23 @@ void Client::on_Quit_clicked()
 
 void Client::on_IndicatorRX_changed(int freq)
 {
-	fPlotter->SetDemodCenterFreq(freq);
-	fPlotter->UpdateOverlay();
+	m_Plotter->SetDemodCenterFreq(freq);
+	m_Plotter->UpdateOverlay();
 }
 
 //------------------------------------------------------------------------------
 
 void Client::on_FrequencyRX_changed(int freq)
 {
-	fIndicatorRX->setValue(freq);
+	m_IndicatorRX->setValue(freq);
 }
 
 //------------------------------------------------------------------------------
 
 void Client::on_IndicatorFFT_changed(int freq)
 {
-	fPlotter->SetCenterFreq(freq);
-	fPlotter->UpdateOverlay();
+	m_Plotter->SetCenterFreq(freq);
+	m_Plotter->UpdateOverlay();
 }
 
 //------------------------------------------------------------------------------
@@ -137,18 +158,19 @@ void Client::on_IndicatorFFT_changed(int freq)
 void Client::on_Range_changed(int range)
 {
   int step = 10;
-  int offset = fOffset->value();
+  int offset = m_Offset->value();
   switch(range)
   {
     case 0: step = 1; break;
     case 1: step = 2; break;
-    case 2: step = 5; break;
-    case 3: step = 10; break;
-    case 4: step = 15; break;
+    case 2: step = 3; break;
+    case 3: step = 5; break;
+    case 4: step = 10; break;
+    case 5: step = 15; break;
   }
-  fPlotter->SetMaxdB(-200 + offset*5 + step*12);
-  fPlotter->SetdBStepSize(step);
-	fPlotter->UpdateOverlay();
+  m_Plotter->SetMaxdB(-200 + offset*5 + step*12);
+  m_Plotter->SetdBStepSize(step);
+	m_Plotter->UpdateOverlay();
 }
 
 //------------------------------------------------------------------------------
@@ -156,15 +178,16 @@ void Client::on_Range_changed(int range)
 void Client::on_Offset_changed(int offset)
 {
   int step = 10;
-  switch(fRange->value())
+  switch(m_Range->value())
   {
     case 0: step = 1; break;
     case 1: step = 2; break;
-    case 2: step = 5; break;
-    case 3: step = 10; break;
-    case 4: step = 15; break;
+    case 2: step = 3; break;
+    case 3: step = 5; break;
+    case 4: step = 10; break;
+    case 5: step = 15; break;
   }
-  fPlotter->SetMaxdB(-200 + offset*5 + step*12);
-  fPlotter->SetdBStepSize(step);
-	fPlotter->UpdateOverlay();
+  m_Plotter->SetMaxdB(-200 + offset*5 + step*12);
+  m_Plotter->SetdBStepSize(step);
+	m_Plotter->UpdateOverlay();
 }
