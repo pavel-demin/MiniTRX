@@ -18,12 +18,14 @@ class Server: public QObject
   Q_OBJECT
 
 public:
-  Server(quint16 port, QObject *parent = 0);
+  Server(int16_t port, QObject *parent = 0);
   virtual ~Server();
 
 private slots:
   void on_TimerRX_timeout();
+  void on_TimerTX_timeout();
   void on_FutureWatcherRX_finished();
+  void on_FutureWatcherTX_finished();
   void on_WebSocketServer_closed();
   void on_WebSocketServer_newConnection();
   void on_WebSocketServer_textMessageReceived(QString message);
@@ -32,14 +34,17 @@ private slots:
 
 private:
   void processRX();
+  void processTX();
 
   uint32_t *fCfg, *fSts;
-  int32_t *fBufRX;
-  int fLimitRX;
-  float *fInputBufferRX;
-  int fInputOffsetRX;
+  int32_t *fBufRX, *fBufTX, *fBufFFT;
+  int fLimitRX, fInputOffsetRX;
+  int fLimitTX, fInputOffsetTX;
+  QByteArray *fOutputBufferRX;
   QTimer *fTimerRX;
+  QTimer *fTimerTX;
   QFutureWatcher<void> *fFutureWatcherRX;
+  QFutureWatcher<void> *fFutureWatcherTX;
   QWebSocketServer *fWebSocketServer;
   QWebSocket *fWebSocket;
 };
