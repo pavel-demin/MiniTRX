@@ -10,7 +10,7 @@ class Indicator: public QFrame
 public:
   Indicator(QWidget *parent = 0);
   virtual ~Indicator();
-  int value() {return fValue;};
+  int value() {return m_Value;};
   void setValue(int value);
   void setDeltaMin(int delta);
   void applyDelta(int delta);
@@ -19,7 +19,7 @@ signals:
   void valueChanged(int value);
 
 private:
-  int fValue;
+  int m_Value;
 };
 
 #endif

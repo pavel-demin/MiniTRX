@@ -9,14 +9,17 @@
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QSlider>
 #include <QtWidgets/QComboBox>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QGraphicsColorizeEffect>
 #include <QtMultimedia/QAudioDeviceInfo>
+#include <QtMultimedia/QAudioInput>
 #include <QtMultimedia/QAudioOutput>
+#include <QtWebSockets/QWebSocket>
 
 #include "client.h"
 #include "indicator.h"
 #include "plotter.h"
-
-using namespace std;
 
 //------------------------------------------------------------------------------
 
@@ -47,14 +50,19 @@ public:
 
 Client::Client(QWidget *parent):
   QWidget(parent), m_IndicatorRX(0), m_IndicatorTX(0), m_IndicatorFFT(0),
-  m_LevelRX(0), m_LevelTX(0), m_Range(0), m_Offset(0), m_Plotter(0)
+  m_LevelRX(0), m_LevelTX(0), m_Range(0), m_Offset(0), m_Plotter(0),
+  m_Address(0), m_Connect(0), m_EnableRX(0), m_EnableTX(0), m_EnableFFT(0),
+  m_InputDevice(0), m_OutputDevice(0), m_AudioFormat(0),
+  m_AudioInput(0), m_AudioOutput(0),
+  m_AudioInputDevice(0), m_AudioOutputDevice(0),
+  m_WebSocket(0)
 {
   CustomUiLoader loader;
   QString buffer;
 
-  QFile file("MiniTRX-client.ui");
+  QFile file(":/forms/client.ui");
   file.open(QFile::ReadOnly);
-  QWidget *formWidget = loader.load(&file, this);
+  QWidget *widget = loader.load(&file, this);
   file.close();
 
   m_IndicatorRX = findChild<Indicator *>("IndicatorRX");
@@ -68,6 +76,13 @@ Client::Client(QWidget *parent):
   m_Offset = findChild<QSlider *>("Offset");
 
   m_Plotter = findChild<CPlotter *>("Plotter");
+  
+  m_Address = findChild<QLineEdit *>("Address");
+
+  m_Connect = findChild<QPushButton *>("Connect");
+  m_EnableRX = findChild<QPushButton *>("EnableRX");
+  m_EnableTX = findChild<QPushButton *>("EnableTX");
+  m_EnableFFT = findChild<QPushButton *>("EnableFFT");
 
 	connect(m_IndicatorRX, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorRX_changed(int)));
 	connect(m_Plotter, SIGNAL(NewDemodFreq(int)), this, SLOT(on_FrequencyRX_changed(int)));
@@ -86,37 +101,142 @@ Client::Client(QWidget *parent):
   m_IndicatorFFT->setFrameShadow(QFrame::Sunken);
   m_IndicatorFFT->setDeltaMin(1000);
 
-  m_DeviceRX = findChild<QComboBox *>("DeviceRX");
+  m_AudioFormat = new QAudioFormat;
+
+  m_AudioFormat->setSampleRate(48000);
+  m_AudioFormat->setChannelCount(1);
+  m_AudioFormat->setSampleSize(16);
+  m_AudioFormat->setCodec("audio/pcm");
+  m_AudioFormat->setByteOrder(QAudioFormat::LittleEndian);
+  m_AudioFormat->setSampleType(QAudioFormat::SignedInt);
+
+  m_OutputDevice = findChild<QComboBox *>("OutputDevice");
   const QAudioDeviceInfo &defaultOutputDevice = QAudioDeviceInfo::defaultOutputDevice();
-  m_DeviceRX->addItem(defaultOutputDevice.deviceName(), qVariantFromValue(defaultOutputDevice));
+  m_OutputDevice->addItem(defaultOutputDevice.deviceName(), qVariantFromValue(defaultOutputDevice));
   foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioOutput))
   {
-    if(device != defaultOutputDevice) m_DeviceRX->addItem(device.deviceName(), qVariantFromValue(device));
+    if(device != defaultOutputDevice) m_OutputDevice->addItem(device.deviceName(), qVariantFromValue(device));
   }
-  connect(m_DeviceRX, SIGNAL(activated(int)), this, SLOT(on_DeviceTX_activated(int)));
+  connect(m_OutputDevice, SIGNAL(activated(int)), this, SLOT(on_OutputDevice_activated(int)));
 
-  m_DeviceTX = findChild<QComboBox *>("DeviceTX");
+  m_AudioOutput = new QAudioOutput(defaultOutputDevice, *m_AudioFormat, this);
+  m_AudioOutputDevice = m_AudioOutput->start();
+  connect(m_AudioOutput, SIGNAL(notify()), this, SLOT(on_AudioOutput_notify()));
+
+  m_InputDevice = findChild<QComboBox *>("InputDevice");
   const QAudioDeviceInfo &defaultInputDevice = QAudioDeviceInfo::defaultInputDevice();
-  m_DeviceTX->addItem(defaultInputDevice.deviceName(), qVariantFromValue(defaultInputDevice));
+  m_InputDevice->addItem(defaultInputDevice.deviceName(), qVariantFromValue(defaultInputDevice));
   foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioInput))
   {
-    if(device != defaultInputDevice) m_DeviceTX->addItem(device.deviceName(), qVariantFromValue(device));
+    if(device != defaultInputDevice) m_InputDevice->addItem(device.deviceName(), qVariantFromValue(device));
   }
-  connect(m_DeviceTX, SIGNAL(activated(int)), this, SLOT(on_DeviceTX_activated(int)));
+  connect(m_InputDevice, SIGNAL(activated(int)), this, SLOT(on_InputDevice_activated(int)));
+
+  m_AudioInput = new QAudioInput(defaultInputDevice, *m_AudioFormat, this);
+  m_AudioInputDevice = m_AudioInput->start();
+  connect(m_AudioInput, SIGNAL(notify()), this, SLOT(on_AudioInput_notify()));
 
   QMetaObject::connectSlotsByName(this);
 
   QVBoxLayout *layout = new QVBoxLayout;
   layout->setContentsMargins(0, 0, 0, 0);
-  layout->addWidget(formWidget);
+  layout->addWidget(widget);
   setLayout(layout);
 
   setFixedSize(layout->maximumSize());
+  
+  m_WebSocket = new QWebSocket();
+  connect(m_WebSocket, SIGNAL(connected), this, SLOT(on_WebSocket_connected));
+  connect(m_WebSocket, SIGNAL(disconnected), this, SLOT(on_WebSocket_disconnected));
+
 }
 
 //------------------------------------------------------------------------------
 
 Client::~Client()
+{
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_EnableRX_clicked()
+{
+  if(m_EnableRX->isChecked())
+  {
+    m_WebSocket->sendTextMessage(QString("start RX"));
+    m_EnableRX->setText(QString("OFF"));
+  }
+  else
+  {
+    m_WebSocket->sendTextMessage(QString("stop RX"));
+    m_EnableRX->setText(QString("ON"));
+  }
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_EnableTX_clicked()
+{
+  if(m_EnableTX->isChecked())
+  {
+    m_WebSocket->sendTextMessage(QString("start TX"));
+    m_EnableTX->setText(QString("OFF"));
+  }
+  else
+  {
+    m_WebSocket->sendTextMessage(QString("stop TX"));
+    m_EnableTX->setText(QString("ON"));
+  }
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_EnableFFT_clicked()
+{
+  if(m_EnableFFT->isChecked())
+  {
+    m_WebSocket->sendTextMessage(QString("start FFT"));
+    m_EnableFFT->setText(QString("OFF"));
+  }
+  else
+  {
+    m_WebSocket->sendTextMessage(QString("stop FFT"));
+    m_EnableFFT->setText(QString("ON"));
+  }
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_Connect_clicked()
+{
+  if(m_Connect->isChecked())
+  {
+    m_WebSocket->open(QString("ws://") + m_Address->text() + QString(":1001"));
+    m_Connect->setText(QString("Disconnect"));
+  }
+  else
+  {
+    m_WebSocket->close();
+    m_Connect->setText(QString("Connect"));
+  }
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_WebSocket_connected()
+{
+  connect(m_WebSocket, SIGNAL(binaryMessageReceived), this, SLOT(on_WebSocket_binaryMessageReceived));
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_WebSocket_disconnected()
+{
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_WebSocket_binaryMessageReceived(QByteArray message)
 {
 }
 
@@ -129,6 +249,44 @@ void Client::on_Quit_clicked()
 }
 
 */
+
+//------------------------------------------------------------------------------
+
+void Client::on_OutputDevice_activated(int index)
+{
+  const QAudioDeviceInfo &device = m_OutputDevice->itemData(index).value<QAudioDeviceInfo>();
+  m_AudioOutput->stop();
+  m_AudioOutput->disconnect(this);
+  delete m_AudioOutput;
+  m_AudioOutput = new QAudioOutput(device, *m_AudioFormat, this);
+  m_AudioOutputDevice = m_AudioOutput->start();
+  connect(m_AudioOutput, SIGNAL(notify()), this, SLOT(on_AudioOutput_notify()));
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_InputDevice_activated(int index)
+{
+  const QAudioDeviceInfo &device = m_InputDevice->itemData(index).value<QAudioDeviceInfo>();
+  m_AudioInput->stop();
+  m_AudioInput->disconnect(this);
+  delete m_AudioInput;
+  m_AudioInput = new QAudioInput(device, *m_AudioFormat, this);
+  m_AudioInputDevice = m_AudioInput->start();
+  connect(m_AudioInput, SIGNAL(notify()), this, SLOT(on_AudioInput_notify()));
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_AudioInput_notify()
+{
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_AudioOutput_notify()
+{
+}
 
 //------------------------------------------------------------------------------
 

@@ -6,11 +6,11 @@
 
 //------------------------------------------------------------------------------
 
-static const QString gStyleSheets[3] =
+static const QString c_StyleSheets[3] =
 {
   "",
-  "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255, 155, 155, 255), stop:0.49 rgba(255, 155, 155, 255), stop:0.50 rgba(0, 0, 0, 0), stop:1 rgba(0, 0, 0, 0));",
-  "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0,0,0,0), stop:0.50 rgba(0, 0, 0, 0), stop:0.51 rgba(155, 155, 255, 255), stop:1 rgba(155, 155, 255, 255));"
+  "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(255, 153, 153, 255), stop:0.49 rgba(255, 153, 153, 255), stop:0.50 rgba(0, 0, 0, 0), stop:1 rgba(0, 0, 0, 0))",
+  "background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:0, y2:1, stop:0 rgba(0, 0, 0, 0), stop:0.50 rgba(0, 0, 0, 0), stop:0.51 rgba(153, 204, 255, 255), stop:1 rgba(153, 204, 255, 255))"
 };
 
 //------------------------------------------------------------------------------
@@ -18,25 +18,25 @@ static const QString gStyleSheets[3] =
 class CustomDigit: public QLabel
 {
 public:
-  CustomDigit(QWidget *parent = 0): QLabel(parent), fActive(true), fState(0), fDelta(0) {}
+  CustomDigit(QWidget *parent = 0): QLabel(parent), m_Active(true), m_State(0), m_Delta(0) {}
 
   void mouseMoveEvent(QMouseEvent *event)
   {
-    if(!fActive) return;
+    if(!m_Active) return;
     QPalette pal;
     QColor color = palette().color(QPalette::WindowText);
-    if(event->y() < height()/2 && fState != 1)
+    if(event->y() < height()/2 && m_State != 1)
     {
-      fState = 1;
-      setStyleSheet(gStyleSheets[1]);
+      m_State = 1;
+      setStyleSheet(c_StyleSheets[1]);
       pal = palette();
       pal.setColor(QPalette::WindowText, color);
       setPalette(pal);
     }
-    if(event->y() > height()/2 && fState != 2)
+    if(event->y() > height()/2 && m_State != 2)
     {
-      fState = 2;
-      setStyleSheet(gStyleSheets[2]);
+      m_State = 2;
+      setStyleSheet(c_StyleSheets[2]);
       pal = palette();
       pal.setColor(QPalette::WindowText, color);
       setPalette(pal);
@@ -45,11 +45,11 @@ public:
 
   void leaveEvent(QEvent *event)
   {
-    if(!fActive) return;
+    if(!m_Active) return;
     QPalette pal;
     QColor color = palette().color(QPalette::WindowText);
-    fState = 0;
-    setStyleSheet(gStyleSheets[0]);
+    m_State = 0;
+    setStyleSheet(c_StyleSheets[0]);
     pal = palette();
     pal.setColor(QPalette::WindowText, color);
     setPalette(pal);
@@ -57,27 +57,27 @@ public:
 
   void mousePressEvent(QMouseEvent *event)
   {
-    if(!fActive) return;
+    if(!m_Active) return;
     if(event->y() < height()/2)
     {
-      fIndicator->applyDelta(fDelta);
+      m_Indicator->applyDelta(m_Delta);
     }
     if(event->y() > height()/2)
     {
-      fIndicator->applyDelta(-fDelta);
+      m_Indicator->applyDelta(-m_Delta);
     }
   }
 
   void wheelEvent(QWheelEvent *event)
   {
-    if(!fActive) return;
-    fIndicator->applyDelta(event->delta()/90*fDelta);
+    if(!m_Active) return;
+    m_Indicator->applyDelta(event->delta()/90*m_Delta);
   }
 
-  bool fActive;
-  int fState;
-  int fDelta;
-  Indicator *fIndicator;
+  bool m_Active;
+  int m_State;
+  int m_Delta;
+  Indicator *m_Indicator;
 };
 
 //------------------------------------------------------------------------------
@@ -87,8 +87,8 @@ Indicator::Indicator(QWidget *parent):
 {
   CustomDigit *digit;
   int i, x, delta;
-  QFont font("Arial", 27, QFont::Normal);
-  x = 155;
+  QFont font("Arial", 21, QFont::Normal);
+  x = 143;
   delta = 1;
   for(i = 0; i < 8; ++i)
   {
@@ -96,11 +96,11 @@ Indicator::Indicator(QWidget *parent):
     digit->setText(QString::number(0));
     digit->setAlignment(Qt::AlignCenter);
     digit->setFont(font);
-    digit->setGeometry(QRect(x, 5, 20, 30));
+    digit->setGeometry(QRect(x, 2, 18, 27));
     digit->setMouseTracking(true);
-    digit->fDelta = delta;
-    digit->fIndicator = this;
-    x -= (i % 3 == 2) ? 25 : 20;
+    digit->m_Delta = delta;
+    digit->m_Indicator = this;
+    x -= (i % 3 == 2) ? 23 : 18;
     delta *= 10;
   }
 }
@@ -120,7 +120,7 @@ void Indicator::setValue(int value)
   if(value < 0 && value > 50000000) return;
   foreach(CustomDigit *digit, findChildren<CustomDigit *>())
   {
-    quotient = value/digit->fDelta;
+    quotient = value/digit->m_Delta;
     palette = digit->palette();
     if(quotient == 0)
     {
@@ -133,7 +133,7 @@ void Indicator::setValue(int value)
     digit->setPalette(palette);
     digit->setText(QString::number(quotient%10));
   }
-  fValue = value;
+  m_Value = value;
   emit valueChanged(value);
 }
 
@@ -143,16 +143,16 @@ void Indicator::setDeltaMin(int delta)
 {
   foreach(CustomDigit *digit, findChildren<CustomDigit *>())
   {
-    if(digit->fDelta < delta)
+    if(digit->m_Delta < delta)
     {
       digit->setText(QString::number(0));
       digit->setMouseTracking(false);
-      digit->fActive = false;
+      digit->m_Active = false;
     }
     else
     {
       digit->setMouseTracking(true);
-      digit->fActive = true;
+      digit->m_Active = true;
     }
   }
 }
@@ -161,7 +161,7 @@ void Indicator::setDeltaMin(int delta)
 
 void Indicator::applyDelta(int delta)
 {
-  int value = fValue + delta;
+  int value = m_Value + delta;
   if(delta < 0 && value < 0) value = 0;
   if(delta > 0 && value > 50000000) value = 50000000;
   setValue(value);

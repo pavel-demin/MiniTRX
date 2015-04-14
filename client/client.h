@@ -7,8 +7,12 @@ class QPushButton;
 class QProgressBar;
 class QSlider;
 class QComboBox;
+class QLineEdit;
+class QAudioFormat;
 class QAudioOutput;
 class QAudioInput;
+class QIODevice;
+class QWebSocket;
 class Indicator;
 class CPlotter;
 
@@ -21,11 +25,23 @@ public:
   virtual ~Client();
 
 private slots:
-  virtual void on_IndicatorRX_changed(int freq);
-  virtual void on_FrequencyRX_changed(int freq);
-  virtual void on_IndicatorFFT_changed(int freq);
-  virtual void on_Range_changed(int range);
-  virtual void on_Offset_changed(int offset);
+  void on_IndicatorRX_changed(int freq);
+  void on_FrequencyRX_changed(int freq);
+  void on_IndicatorFFT_changed(int freq);
+  void on_Range_changed(int range);
+  void on_Offset_changed(int offset);
+  void on_InputDevice_activated(int index);
+  void on_OutputDevice_activated(int index);
+  void on_AudioInput_notify();
+  void on_AudioOutput_notify();
+  void on_WebSocket_connected();
+  void on_WebSocket_disconnected();
+  void on_WebSocket_binaryMessageReceived(QByteArray message);
+
+  void on_EnableRX_clicked();
+  void on_EnableTX_clicked();
+  void on_EnableFFT_clicked();
+  void on_Connect_clicked();
 
 private:
 
@@ -38,14 +54,23 @@ private:
   QSlider *m_Offset;
   CPlotter *m_Plotter;
 
-  QComboBox *m_DeviceRX;
-  QComboBox *m_DeviceTX;
-  QAudioOutput *m_AudioOutput;
+  QLineEdit *m_Address;
+
+  QPushButton *m_Connect;
+  QPushButton *m_EnableRX;
+  QPushButton *m_EnableTX;
+  QPushButton *m_EnableFFT;
+
+  QComboBox *m_InputDevice;
+  QComboBox *m_OutputDevice;
+
+  QAudioFormat *m_AudioFormat;
   QAudioInput *m_AudioInput;
-
-  bool m_pullMode;
-  QByteArray m_buffer;
-
+  QAudioOutput *m_AudioOutput;
+  QIODevice *m_AudioInputDevice;
+  QIODevice *m_AudioOutputDevice;
+  
+  QWebSocket *m_WebSocket;
 };
 
 #endif
