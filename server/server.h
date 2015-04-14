@@ -28,25 +28,25 @@ private slots:
   void on_FutureWatcherTX_finished();
   void on_WebSocketServer_closed();
   void on_WebSocketServer_newConnection();
-  void on_WebSocketServer_textMessageReceived(QString message);
-  void on_WebSocketServer_binaryMessageReceived(QByteArray message);
-  void on_WebSocketServer_disconnected();
+  void on_WebSocket_textMessageReceived(QString message);
+  void on_WebSocket_binaryMessageReceived(QByteArray message);
+  void on_WebSocket_disconnected();
 
 private:
   void processRX();
   void processTX();
 
-  uint32_t *fCfg, *fSts;
-  int32_t *fBufRX, *fBufTX, *fBufFFT;
-  int fLimitRX, fInputOffsetRX;
-  int fLimitTX, fInputOffsetTX;
-  QByteArray *fOutputBufferRX;
-  QTimer *fTimerRX;
-  QTimer *fTimerTX;
-  QFutureWatcher<void> *fFutureWatcherRX;
-  QFutureWatcher<void> *fFutureWatcherTX;
-  QWebSocketServer *fWebSocketServer;
-  QWebSocket *fWebSocket;
+  uint32_t *m_Cfg, *m_Sts;
+  int32_t *m_BufferRX, *m_BufferTX, *m_BufferFFT;
+  int m_LimitRX, m_InputOffsetRX;
+  int m_LimitTX, m_InputOffsetTX;
+  QByteArray *m_OutputBufferRX;
+  QTimer *m_TimerRX;
+  QTimer *m_TimerTX;
+  QFutureWatcher<void> *m_FutureWatcherRX;
+  QFutureWatcher<void> *m_FutureWatcherTX;
+  QWebSocketServer *m_WebSocketServer;
+  QWebSocket *m_WebSocket;
 };
 
 #endif
