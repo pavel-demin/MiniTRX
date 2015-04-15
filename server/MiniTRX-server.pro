@@ -1,11 +1,12 @@
 TARGET = MiniTRX-server
 QT += core websockets
 QT -= gui
-CONFIG += console debug_and_release
+CONFIG += static console debug_and_release
 TEMPLATE = app
 QMAKE_CFLAGS = -fomit-frame-pointer -fstrict-aliasing -ffast-math
 INCLUDEPATH += wdsp /opt/fftw/fftw-3.2.2-armhf/include
 LIBS += -L/opt/fftw/fftw-3.2.2-armhf/lib -lfftw3f
+QMAKE_LFLAGS += -static
 HEADERS = server.h
 SOURCES = server.cpp main.cpp
 SOURCES += wdsp/amd.c wdsp/ammod.c wdsp/amsq.c wdsp/anf.c wdsp/anr.c \
