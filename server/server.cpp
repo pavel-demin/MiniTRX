@@ -9,17 +9,18 @@
 #include <sys/ioctl.h>
 
 #include <QtCore/QTimer>
-#include <QtCore/QFutureWatcher>
 #include <QtCore/QCoreApplication>
-#include <QtConcurrent/QtConcurrent>
 #include <QtWebSockets/QWebSocketServer>
 #include <QtWebSockets/QWebSocket>
 
 #include <fftw3.h>
 
-#include "server.h"
+extern "C"
+{
+  #include "comm.h"
+}
 
-#include "comm.h"
+#include "server.h"
 
 using namespace std;
 
@@ -30,8 +31,8 @@ Server::Server(int16_t port, QObject *parent):
   m_BufferRX(0), m_BufferTX(0), m_BufferFFT(0),
   m_LimitRX(256), m_InputOffsetRX(0),
   m_LimitTX(0), m_InputOffsetTX(0),
-  m_OutputBufferRX(0),
-  m_TimerRX(0), m_TimerTX(0), m_FutureWatcherRX(0), m_FutureWatcherTX(0),
+  m_InputBufferRX(0), m_OutputBufferRX(0),
+  m_TimerRX(0), m_TimerTX(0),
   m_WebSocketServer(0), m_WebSocket(0)
 {
   int memFile;
@@ -63,25 +64,22 @@ Server::Server(int16_t port, QObject *parent):
     fftwf_import_wisdom_from_file(wisdomFile);
     fclose(wisdomFile);
   }
-  create_rxa(0, 2048, 20000);
-  create_txa(0, 2048, 20000);
+  OpenChannel(0, 256, 2048, 20000, 20000, 20000, 0, 0, 0.010, 0.025, 0.000, 0.010, 0);
+  OpenChannel(1, 256, 2048, 20000, 20000, 20000, 1, 0, 0.010, 0.025, 0.000, 0.010, 0);
   if((wisdomFile = fopen("wdsp-fftw-wisdom.txt", "w")))
   {
     fftwf_export_wisdom_to_file(wisdomFile);
     fclose(wisdomFile);
   }
 
+  m_InputBufferRX = new QByteArray();
+  m_InputBufferRX->resize(512 * sizeof(float));
+
   m_OutputBufferRX = new QByteArray();
-  m_OutputBufferRX->resize(rxa[0].size * sizeof(float) + 1);
+  m_OutputBufferRX->resize(512 * sizeof(float) + 2);
 
   m_TimerRX = new QTimer(this);
   connect(m_TimerRX, SIGNAL(timeout()), this, SLOT(on_TimerRX_timeout()));
-
-  m_FutureWatcherRX = new QFutureWatcher<void>(this);
-  connect(m_FutureWatcherRX, SIGNAL(finished()), this, SLOT(on_FutureWatcherRX_finished()));
-
-  m_FutureWatcherTX = new QFutureWatcher<void>(this);
-  connect(m_FutureWatcherTX, SIGNAL(finished()), this, SLOT(on_FutureWatcherTX_finished()));
 
   m_WebSocketServer = new QWebSocketServer(QString("SDR"), QWebSocketServer::NonSecureMode, this);
   if(m_WebSocketServer->listen(QHostAddress::Any, port))
@@ -137,9 +135,9 @@ void Server::on_WebSocket_textMessageReceived(QString message)
 
 void Server::on_TimerRX_timeout()
 {
-  int32_t i, offset, position;
-  int32_t *bufferInt;
-  float *bufferFloat;
+  int32_t i, offset, position, error;
+  int32_t *pointerRX;
+  float *bufferIn, *pointerIn, *bufferOut;
 
   position = *(m_Sts + 0);
   if((m_LimitRX > 0 && position > m_LimitRX) || (m_LimitRX == 0 && position < 256))
@@ -147,49 +145,19 @@ void Server::on_TimerRX_timeout()
     offset = m_LimitRX > 0 ? 0 : 512;
     m_LimitRX += 256;
     if(m_LimitRX == 512) m_LimitRX = 0;
-    bufferInt = m_BufferRX + offset;
-    bufferFloat = rxa[0].inbuff + m_InputOffsetRX;
+    pointerRX = m_BufferRX + offset;
+    bufferIn = (float *)(m_InputBufferRX->constData());
+    pointerIn = bufferIn;
     for(i = 0; i < 256; ++i)
     {
-      *(bufferFloat++) = ((float) *(bufferInt++)) / 2147483647.0;
-      *(bufferFloat++) = ((float) *(bufferInt++)) / 2147483647.0;
+      *(pointerIn++) = ((float) *(pointerRX++)) / 2147483647.0;
+      *(pointerIn++) = ((float) *(pointerRX++)) / 2147483647.0;
     }
-    m_InputOffsetRX += 512;
-    if(m_InputOffsetRX == 4096)
-    {
-      m_InputOffsetRX = 0;
-      QFuture<void> future = QtConcurrent::run(this, &Server::processRX);
-      m_FutureWatcherRX->setFuture(future);
-    }
+    bufferOut = (float *)(m_OutputBufferRX->constData() + 2);
+    fexchange0(0, bufferIn, bufferOut, &error);
+    printf("send RX data\n");
+    if(m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferRX);
   }
-}
-
-//------------------------------------------------------------------------------
-
-void Server::processRX()
-{
-  int32_t i, size;
-  float *bufferReal, *bufferComplex;
-
-  xrxa(0);
-
-  size = rxa[0].size;
-  bufferReal = (float *)(m_OutputBufferRX->constData() + 1);
-  bufferComplex = rxa[0].outbuff;
-
-  for(i = 0; i < size; ++i)
-  {
-    *(bufferReal++) = *(bufferComplex++);
-    ++bufferComplex;
-  }
-}
-
-//------------------------------------------------------------------------------
-
-void Server::on_FutureWatcherRX_finished()
-{
-  printf("send RX data\n");
-  if(m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferRX);
 }
 
 //------------------------------------------------------------------------------
@@ -198,7 +166,7 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
 {
   int32_t i, size;
   float *bufferReal, *bufferComplex, value;
-
+/*
   size = txa[0].size;
   bufferReal = (float *)(message.constData());
   bufferComplex = txa[1].inbuff;
@@ -209,22 +177,7 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
     *(bufferComplex++) = value;
     *(bufferComplex++) = value;
   }
-
-  QFuture<void> future = QtConcurrent::run(this, &Server::processTX);
-  m_FutureWatcherTX->setFuture(future);
-}
-
-//------------------------------------------------------------------------------
-
-void Server::processTX()
-{
-  xtxa(1);
-}
-
-//------------------------------------------------------------------------------
-
-void Server::on_FutureWatcherTX_finished()
-{
+*/
 }
 
 //------------------------------------------------------------------------------

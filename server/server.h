@@ -11,8 +11,6 @@ class QTimer;
 class QWebSocketServer;
 class QWebSocket;
 
-template <class T> class QFutureWatcher;
-
 class Server: public QObject
 {
   Q_OBJECT
@@ -24,8 +22,6 @@ public:
 private slots:
   void on_TimerRX_timeout();
   void on_TimerTX_timeout();
-  void on_FutureWatcherRX_finished();
-  void on_FutureWatcherTX_finished();
   void on_WebSocketServer_closed();
   void on_WebSocketServer_newConnection();
   void on_WebSocket_textMessageReceived(QString message);
@@ -33,18 +29,14 @@ private slots:
   void on_WebSocket_disconnected();
 
 private:
-  void processRX();
-  void processTX();
-
   uint32_t *m_Cfg, *m_Sts;
   int32_t *m_BufferRX, *m_BufferTX, *m_BufferFFT;
   int m_LimitRX, m_InputOffsetRX;
   int m_LimitTX, m_InputOffsetTX;
+  QByteArray *m_InputBufferRX;
   QByteArray *m_OutputBufferRX;
   QTimer *m_TimerRX;
   QTimer *m_TimerTX;
-  QFutureWatcher<void> *m_FutureWatcherRX;
-  QFutureWatcher<void> *m_FutureWatcherTX;
   QWebSocketServer *m_WebSocketServer;
   QWebSocket *m_WebSocket;
 };
