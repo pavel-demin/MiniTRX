@@ -28,7 +28,7 @@ warren@wpratt.com
 
 void create_rxa (int channel)
 {
-	rxa[channel].mode = RXA_LSB;
+	rxa[channel].mode = RXA_AM;
 	rxa[channel].inbuff  = (float *) malloc0 (1 * ch[channel].dsp_insize  * sizeof (complex));
 	rxa[channel].outbuff = (float *) malloc0 (1 * ch[channel].dsp_outsize * sizeof (complex));
 	rxa[channel].midbuff = (float *) malloc0 (2 * ch[channel].dsp_size    * sizeof (complex));
@@ -86,8 +86,8 @@ void create_rxa (int channel)
 		ch[channel].dsp_size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
-		-4150.0,										// lower filter frequency
-		-150.0,											// upper filter frequency
+		-5000.0,										// lower filter frequency
+		+5000.0,										// upper filter frequency
 		ch[channel].dsp_rate,							// sample rate
 		1,												// wintype
 		1.0);											// gain
@@ -288,7 +288,7 @@ void create_rxa (int channel)
 		0.250,											// tau_fast_backaverage
 		0.005,											// tau_fast_decay
 		5.0,											// pop_ratio
-		1,												// hang_enable
+		1,											// hang_enable
 		0.500,											// tau_hang_backmult
 		0.250,											// hangtime
 		0.250,											// hang_thresh
@@ -317,8 +317,8 @@ void create_rxa (int channel)
 		ch[channel].dsp_size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
-		-4150.0,										// lower filter frequency
-		-150.0,											// upper filter frequency
+		-5000.0,										// lower filter frequency
+		+5000.0,										// upper filter frequency
 		ch[channel].dsp_rate,							// sample rate
 		1,												// wintype
 		1.0);											// gain
