@@ -17,6 +17,8 @@
 #include <QtMultimedia/QAudioOutput>
 #include <QtWebSockets/QWebSocket>
 
+#include <soxr.h>
+
 #include "client.h"
 #include "indicator.h"
 #include "plotter.h"
@@ -52,13 +54,17 @@ Client::Client(QWidget *parent):
   QWidget(parent), m_IndicatorRX(0), m_IndicatorTX(0), m_IndicatorFFT(0),
   m_LevelRX(0), m_LevelTX(0), m_Range(0), m_Offset(0), m_Plotter(0),
   m_Address(0), m_Connect(0), m_EnableRX(0), m_EnableTX(0), m_EnableFFT(0),
-  m_InputDevice(0), m_OutputDevice(0), m_AudioFormat(0),
-  m_AudioInput(0), m_AudioOutput(0),
+  m_InputDevice(0), m_OutputDevice(0), m_InputBuffer(0), m_OutputBuffer(0),
+  m_AudioFormat(0), m_AudioInput(0), m_AudioOutput(0),
   m_AudioInputDevice(0), m_AudioOutputDevice(0),
   m_WebSocket(0)
 {
   CustomUiLoader loader;
   QString buffer;
+  soxr_error_t error;
+  soxr_datatype_t inputType = SOXR_FLOAT32_I;
+  soxr_datatype_t outputType = SOXR_INT16_I;
+  soxr_io_spec_t iospec = soxr_io_spec(inputType, outputType);
 
   QFile file(":/forms/client.ui");
   file.open(QFile::ReadOnly);
@@ -76,7 +82,7 @@ Client::Client(QWidget *parent):
   m_Offset = findChild<QSlider *>("Offset");
 
   m_Plotter = findChild<CPlotter *>("Plotter");
-  
+
   m_Address = findChild<QLineEdit *>("Address");
 
   m_Connect = findChild<QPushButton *>("Connect");
@@ -104,7 +110,7 @@ Client::Client(QWidget *parent):
   m_AudioFormat = new QAudioFormat;
 
   m_AudioFormat->setSampleRate(48000);
-  m_AudioFormat->setChannelCount(1);
+  m_AudioFormat->setChannelCount(2);
   m_AudioFormat->setSampleSize(16);
   m_AudioFormat->setCodec("audio/pcm");
   m_AudioFormat->setByteOrder(QAudioFormat::LittleEndian);
@@ -119,9 +125,14 @@ Client::Client(QWidget *parent):
   }
   connect(m_OutputDevice, SIGNAL(activated(int)), this, SLOT(on_OutputDevice_activated(int)));
 
+  m_OutputBuffer = new QByteArray();
+  m_OutputBuffer->resize(1228 * sizeof(int16_t));
+
+  m_OutputResampler = soxr_create(20000, 48000, 2, &error, &iospec, NULL, NULL);
+
   m_AudioOutput = new QAudioOutput(defaultOutputDevice, *m_AudioFormat, this);
-  m_AudioOutputDevice = m_AudioOutput->start();
-  connect(m_AudioOutput, SIGNAL(notify()), this, SLOT(on_AudioOutput_notify()));
+  //m_AudioOutputDevice = m_AudioOutput->start();
+  //connect(m_AudioOutput, SIGNAL(notify()), this, SLOT(on_AudioOutput_notify()));
 
   m_InputDevice = findChild<QComboBox *>("InputDevice");
   const QAudioDeviceInfo &defaultInputDevice = QAudioDeviceInfo::defaultInputDevice();
@@ -133,8 +144,8 @@ Client::Client(QWidget *parent):
   connect(m_InputDevice, SIGNAL(activated(int)), this, SLOT(on_InputDevice_activated(int)));
 
   m_AudioInput = new QAudioInput(defaultInputDevice, *m_AudioFormat, this);
-  m_AudioInputDevice = m_AudioInput->start();
-  connect(m_AudioInput, SIGNAL(notify()), this, SLOT(on_AudioInput_notify()));
+  //m_AudioInputDevice = m_AudioInput->start();
+  //connect(m_AudioInput, SIGNAL(notify()), this, SLOT(on_AudioInput_notify()));
 
   QMetaObject::connectSlotsByName(this);
 
@@ -144,10 +155,10 @@ Client::Client(QWidget *parent):
   setLayout(layout);
 
   setFixedSize(layout->maximumSize());
-  
+
   m_WebSocket = new QWebSocket();
-  connect(m_WebSocket, SIGNAL(connected), this, SLOT(on_WebSocket_connected));
-  connect(m_WebSocket, SIGNAL(disconnected), this, SLOT(on_WebSocket_disconnected));
+  connect(m_WebSocket, SIGNAL(connected()), this, SLOT(on_WebSocket_connected()));
+  connect(m_WebSocket, SIGNAL(disconnected()), this, SLOT(on_WebSocket_disconnected()));
 
 }
 
@@ -165,6 +176,7 @@ void Client::on_EnableRX_clicked()
   {
     m_WebSocket->sendTextMessage(QString("start RX"));
     m_EnableRX->setText(QString("OFF"));
+    m_AudioOutputDevice = m_AudioOutput->start();
   }
   else
   {
@@ -225,7 +237,7 @@ void Client::on_Connect_clicked()
 
 void Client::on_WebSocket_connected()
 {
-  connect(m_WebSocket, SIGNAL(binaryMessageReceived), this, SLOT(on_WebSocket_binaryMessageReceived));
+  connect(m_WebSocket, SIGNAL(binaryMessageReceived(QByteArray)), this, SLOT(on_WebSocket_binaryMessageReceived(QByteArray)));
 }
 
 //------------------------------------------------------------------------------
@@ -238,6 +250,11 @@ void Client::on_WebSocket_disconnected()
 
 void Client::on_WebSocket_binaryMessageReceived(QByteArray message)
 {
+  size_t idone, odone;
+  float *in = (float *)(message.constData() + 4);
+  int16_t *out = (int16_t *)(m_OutputBuffer->constData());
+  soxr_process(m_OutputResampler, in, 256, &idone, out, 614, &odone);
+  m_AudioOutputDevice->write(m_OutputBuffer->constData(), odone * 2 * sizeof(int16_t));
 }
 
 //------------------------------------------------------------------------------
@@ -254,6 +271,7 @@ void Client::on_Quit_clicked()
 
 void Client::on_OutputDevice_activated(int index)
 {
+/*
   const QAudioDeviceInfo &device = m_OutputDevice->itemData(index).value<QAudioDeviceInfo>();
   m_AudioOutput->stop();
   m_AudioOutput->disconnect(this);
@@ -261,12 +279,14 @@ void Client::on_OutputDevice_activated(int index)
   m_AudioOutput = new QAudioOutput(device, *m_AudioFormat, this);
   m_AudioOutputDevice = m_AudioOutput->start();
   connect(m_AudioOutput, SIGNAL(notify()), this, SLOT(on_AudioOutput_notify()));
+*/
 }
 
 //------------------------------------------------------------------------------
 
 void Client::on_InputDevice_activated(int index)
 {
+/*
   const QAudioDeviceInfo &device = m_InputDevice->itemData(index).value<QAudioDeviceInfo>();
   m_AudioInput->stop();
   m_AudioInput->disconnect(this);
@@ -274,6 +294,7 @@ void Client::on_InputDevice_activated(int index)
   m_AudioInput = new QAudioInput(device, *m_AudioFormat, this);
   m_AudioInputDevice = m_AudioInput->start();
   connect(m_AudioInput, SIGNAL(notify()), this, SLOT(on_AudioInput_notify()));
+*/
 }
 
 //------------------------------------------------------------------------------

@@ -54,7 +54,7 @@ Server::Server(int16_t port, QObject *parent):
   /* enter reset mode */
   *(m_Cfg + 0) &= ~255;
   /* set default phase increment */
-  *(m_Cfg + 1) = (uint32_t)floor(621000/125.0e6*(1<<30)+0.5);
+  *(m_Cfg + 1) = (uint32_t)floor(1125000/125.0e6*(1<<30)+0.5);
 
   bufferInt = m_BufferTX;
   for(i = 0; i < 512; ++i) *(bufferInt++) = 0;
@@ -64,8 +64,8 @@ Server::Server(int16_t port, QObject *parent):
     fftwf_import_wisdom_from_file(wisdomFile);
     fclose(wisdomFile);
   }
-  OpenChannel(0, 256, 2048, 20000, 20000, 20000, 0, 0, 0.010, 0.025, 0.000, 0.010, 0);
-  OpenChannel(1, 256, 2048, 20000, 20000, 20000, 1, 0, 0.010, 0.025, 0.000, 0.010, 0);
+  OpenChannel(0, 256, 4096, 20000, 20000, 20000, 0, 0, 0.010, 0.025, 0.000, 0.010, 0);
+  OpenChannel(1, 256, 4096, 20000, 20000, 20000, 1, 0, 0.010, 0.025, 0.000, 0.010, 0);
   if((wisdomFile = fopen("wdsp-fftw-wisdom.txt", "w")))
   {
     fftwf_export_wisdom_to_file(wisdomFile);
@@ -76,7 +76,7 @@ Server::Server(int16_t port, QObject *parent):
   m_InputBufferRX->resize(512 * sizeof(float));
 
   m_OutputBufferRX = new QByteArray();
-  m_OutputBufferRX->resize(512 * sizeof(float) + 2);
+  m_OutputBufferRX->resize(512 * sizeof(float) + 4);
 
   m_TimerRX = new QTimer(this);
   connect(m_TimerRX, SIGNAL(timeout()), this, SLOT(on_TimerRX_timeout()));
@@ -107,6 +107,7 @@ void Server::on_WebSocket_textMessageReceived(QString message)
   if(message.compare(QString("start RX")) == 0)
   {
     *(m_Cfg + 0) |= 3;
+    SetChannelState(0, 1, 0);
     m_TimerRX->start(6);
   }
   else if(message.compare(QString("stop RX")) == 0)
@@ -153,9 +154,8 @@ void Server::on_TimerRX_timeout()
       *(pointerIn++) = ((float) *(pointerRX++)) / 2147483647.0;
       *(pointerIn++) = ((float) *(pointerRX++)) / 2147483647.0;
     }
-    bufferOut = (float *)(m_OutputBufferRX->constData() + 2);
+    bufferOut = (float *)(m_OutputBufferRX->constData() + 4);
     fexchange0(0, bufferIn, bufferOut, &error);
-    printf("send RX data\n");
     if(m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferRX);
   }
 }

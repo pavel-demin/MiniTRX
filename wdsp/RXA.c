@@ -35,7 +35,7 @@ void create_rxa (int channel)
 
 	// shift to select a slice of spectrum
 	rxa[channel].shift.p = create_shift (
-		1,												// run
+		0,												// run
 		ch[channel].dsp_insize,							// input buffer size
 		rxa[channel].inbuff,							// pointer to input buffer
 		rxa[channel].inbuff,							// pointer to output buffer
@@ -139,7 +139,7 @@ void create_rxa (int channel)
 
 	// AM demod
 	rxa[channel].amd.p = create_amd (
-		0,												// run - OFF by default
+		1,												// run - OFF by default
 		ch[channel].dsp_size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
@@ -279,7 +279,7 @@ void create_rxa (int channel)
 		ch[channel].dsp_rate,							// sample rate
 		0.001,											// tau_attack
 		0.250,											// tau_decay
-		4,												// n_tau
+		4,											// n_tau
 		10000.0,										// max_gain
 		1.5,											// var_gain
 		1000.0,											// fixed_gain

@@ -3,6 +3,8 @@
 
 #include <QtWidgets/QWidget>
 
+#include <soxr.h>
+
 class QPushButton;
 class QProgressBar;
 class QSlider;
@@ -11,6 +13,7 @@ class QLineEdit;
 class QAudioFormat;
 class QAudioOutput;
 class QAudioInput;
+class QByteArray;
 class QIODevice;
 class QWebSocket;
 class Indicator;
@@ -64,12 +67,18 @@ private:
   QComboBox *m_InputDevice;
   QComboBox *m_OutputDevice;
 
+  QByteArray *m_InputBuffer;
+  QByteArray *m_OutputBuffer;
+
+  soxr_t m_InputResampler;
+  soxr_t m_OutputResampler;
+
   QAudioFormat *m_AudioFormat;
   QAudioInput *m_AudioInput;
   QAudioOutput *m_AudioOutput;
   QIODevice *m_AudioInputDevice;
   QIODevice *m_AudioOutputDevice;
-  
+
   QWebSocket *m_WebSocket;
 };
 
