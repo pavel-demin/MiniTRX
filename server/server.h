@@ -7,6 +7,8 @@
 #include <QtCore/QList>
 #include <QtCore/QByteArray>
 
+#include <samplerate.h>
+
 class QTimer;
 class QWebSocketServer;
 class QWebSocket;
@@ -35,6 +37,10 @@ private:
   int m_LimitTX, m_InputOffsetTX;
   QByteArray *m_InputBufferRX;
   QByteArray *m_OutputBufferRX;
+  uint32_t m_CounterRX;
+  int16_t *m_PointerRX;
+  SRC_STATE *m_StateRX;
+  SRC_DATA *m_DataRX;
   QTimer *m_TimerRX;
   QTimer *m_TimerTX;
   QWebSocketServer *m_WebSocketServer;

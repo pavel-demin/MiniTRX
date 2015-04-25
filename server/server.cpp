@@ -15,6 +15,8 @@
 
 #include <fftw3.h>
 
+#include <samplerate.h>
+
 extern "C"
 {
   #include "comm.h"
@@ -32,12 +34,14 @@ Server::Server(int16_t port, QObject *parent):
   m_LimitRX(256), m_InputOffsetRX(0),
   m_LimitTX(0), m_InputOffsetTX(0),
   m_InputBufferRX(0), m_OutputBufferRX(0),
+  m_CounterRX(0), m_PointerRX(0), m_StateRX(0), m_DataRX(0),
   m_TimerRX(0), m_TimerTX(0),
   m_WebSocketServer(0), m_WebSocket(0)
 {
   int memFile;
   FILE *wisdomFile;
-  int32_t i, *bufferInt;
+  int32_t i, *bufferFloatt, error;
+  float *pointerFloat;
 
   if((memFile = open("/dev/mem", O_RDWR)) < 0)
   {
@@ -54,10 +58,10 @@ Server::Server(int16_t port, QObject *parent):
   /* enter reset mode */
   *(m_Cfg + 0) &= ~255;
   /* set default phase increment */
-  *(m_Cfg + 1) = (uint32_t)floor(1125000/125.0e6*(1<<30)+0.5);
+  *(m_Cfg + 1) = (uint32_t)floor(621000/125.0e6*(1<<30)+0.5);
 
-  bufferInt = m_BufferTX;
-  for(i = 0; i < 512; ++i) *(bufferInt++) = 0;
+  bufferFloatt = m_BufferTX;
+  for(i = 0; i < 512; ++i) *(bufferFloatt++) = 0;
 
   if((wisdomFile = fopen("wdsp-fftw-wisdom.txt", "r")))
   {
@@ -72,11 +76,29 @@ Server::Server(int16_t port, QObject *parent):
     fclose(wisdomFile);
   }
 
+  SetRXAAGCFixed(0, 40.0);
+  SetRXAAGCTop(0, 40.0);
+
   m_InputBufferRX = new QByteArray();
-  m_InputBufferRX->resize(512 * sizeof(float));
+  m_InputBufferRX->resize(1590 * sizeof(float));
 
   m_OutputBufferRX = new QByteArray();
-  m_OutputBufferRX->resize(512 * sizeof(float) + 4);
+  m_OutputBufferRX->resize(2048 * sizeof(int16_t) + 4);
+
+  m_PointerRX = (int16_t *)(m_OutputBufferRX->constData() + 4);
+
+  m_StateRX = src_new(SRC_SINC_FASTEST, 2, &error);
+  m_DataRX = new SRC_DATA;
+
+  pointerFloat = (float *)(m_InputBufferRX->constData());
+
+  m_DataRX->data_in = pointerFloat + 512;
+  m_DataRX->input_frames = 256;
+
+  m_DataRX->data_out = pointerFloat + 1024;
+  m_DataRX->output_frames = 283 ;
+  m_DataRX->src_ratio = 22050.0/20000.0;
+  m_DataRX->end_of_input = 0;
 
   m_TimerRX = new QTimer(this);
   connect(m_TimerRX, SIGNAL(timeout()), this, SLOT(on_TimerRX_timeout()));
@@ -102,7 +124,7 @@ Server::~Server()
 
 void Server::on_WebSocket_textMessageReceived(QString message)
 {
-  int32_t i, *bufferInt;
+  int32_t i, *bufferFloatt;
 
   if(message.compare(QString("start RX")) == 0)
   {
@@ -127,8 +149,8 @@ void Server::on_WebSocket_textMessageReceived(QString message)
   else if(message.compare(QString("stop TX")) == 0)
   {
     m_TimerTX->stop();
-    bufferInt = m_BufferTX;
-    for(i = 0; i < 512; ++i) *(bufferInt++) = 0;
+    bufferFloatt = m_BufferTX;
+    for(i = 0; i < 512; ++i) *(bufferFloatt++) = 0;
   }
 }
 
@@ -137,8 +159,8 @@ void Server::on_WebSocket_textMessageReceived(QString message)
 void Server::on_TimerRX_timeout()
 {
   int32_t i, offset, position, error;
-  int32_t *pointerRX;
-  float *bufferIn, *pointerIn, *bufferOut;
+  int32_t *pointerFloatt;
+  float *bufferFloat, *pointerFloat;
 
   position = *(m_Sts + 0);
   if((m_LimitRX > 0 && position > m_LimitRX) || (m_LimitRX == 0 && position < 256))
@@ -146,17 +168,28 @@ void Server::on_TimerRX_timeout()
     offset = m_LimitRX > 0 ? 0 : 512;
     m_LimitRX += 256;
     if(m_LimitRX == 512) m_LimitRX = 0;
-    pointerRX = m_BufferRX + offset;
-    bufferIn = (float *)(m_InputBufferRX->constData());
-    pointerIn = bufferIn;
-    for(i = 0; i < 256; ++i)
+    pointerFloatt = m_BufferRX + offset;
+    bufferFloat = (float *)(m_InputBufferRX->constData());
+    pointerFloat = bufferFloat;
+    for(i = 0; i < 512; ++i)
     {
-      *(pointerIn++) = ((float) *(pointerRX++)) / 2147483647.0;
-      *(pointerIn++) = ((float) *(pointerRX++)) / 2147483647.0;
+      *(pointerFloat++) = ((float) *(pointerFloatt++)) / 2147483647.0;
     }
-    bufferOut = (float *)(m_OutputBufferRX->constData() + 4);
-    fexchange0(0, bufferIn, bufferOut, &error);
-    if(m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferRX);
+    fexchange0(0, bufferFloat, bufferFloat + 512, &error);
+    src_process(m_StateRX, m_DataRX) ;
+    pointerFloat = bufferFloat + 1024;
+    for(i = 0; i < m_DataRX->output_frames_gen; ++i)
+    {
+      *(m_PointerRX++) = (int16_t)(*(pointerFloat++) * 32767.0);
+      *(m_PointerRX++) = (int16_t)(*(pointerFloat++) * 32767.0);
+      ++m_CounterRX;
+      if(m_CounterRX == 1024)
+      {
+        m_CounterRX = 0;
+        m_PointerRX = (int16_t *)(m_OutputBufferRX->constData() + 4);
+        if(m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferRX);
+      }
+    }
   }
 }
 
@@ -185,7 +218,7 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
 void Server::on_TimerTX_timeout()
 {
   int32_t i, offset, position;
-  int32_t *bufferInt;
+  int32_t *bufferFloatt;
   float *bufferFloat;
 
   position = *(m_Sts + 2);
@@ -194,12 +227,12 @@ void Server::on_TimerTX_timeout()
     offset = m_LimitTX > 0 ? 0 : 512;
     m_LimitTX += 256;
     if(m_LimitTX == 512) m_LimitTX = 0;
-    bufferInt = m_BufferTX + offset;
+    bufferFloatt = m_BufferTX + offset;
     bufferFloat = txa[1].outbuff + m_InputOffsetTX;
     for(i = 0; i < 256; ++i)
     {
-      *(bufferInt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
-      *(bufferInt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
+      *(bufferFloatt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
+      *(bufferFloatt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
     }
     m_InputOffsetTX += 256;
     if(m_InputOffsetTX == 4096)
