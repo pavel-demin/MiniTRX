@@ -34,13 +34,14 @@ Server::Server(int16_t port, QObject *parent):
   m_LimitRX(256), m_InputOffsetRX(0),
   m_LimitTX(0), m_InputOffsetTX(0),
   m_InputBufferRX(0), m_OutputBufferRX(0),
-  m_CounterRX(0), m_PointerRX(0), m_StateRX(0), m_DataRX(0),
+  m_CounterRX(0), m_PointerRX(0), m_FreqMin(25000),
+  m_StateRX(0), m_DataRX(0),
   m_TimerRX(0), m_TimerTX(0),
   m_WebSocketServer(0), m_WebSocket(0)
 {
   int memFile;
   FILE *wisdomFile;
-  int32_t i, *bufferFloatt, error;
+  int32_t i, *pointerInt, error;
   float *pointerFloat;
 
   if((memFile = open("/dev/mem", O_RDWR)) < 0)
@@ -58,10 +59,10 @@ Server::Server(int16_t port, QObject *parent):
   /* enter reset mode */
   *(m_Cfg + 0) &= ~255;
   /* set default phase increment */
-  *(m_Cfg + 1) = (uint32_t)floor(621000/125.0e6*(1<<30)+0.5);
+  *(m_Cfg + 2) = (uint32_t)floor(621000/125.0e6*(1<<30)+0.5);
 
-  bufferFloatt = m_BufferTX;
-  for(i = 0; i < 512; ++i) *(bufferFloatt++) = 0;
+  pointerInt = m_BufferTX;
+  for(i = 0; i < 512; ++i) *(pointerInt++) = 0;
 
   if((wisdomFile = fopen("wdsp-fftw-wisdom.txt", "r")))
   {
@@ -122,44 +123,10 @@ Server::~Server()
 
 //------------------------------------------------------------------------------
 
-void Server::on_WebSocket_textMessageReceived(QString message)
-{
-  int32_t i, *bufferFloatt;
-
-  if(message.compare(QString("start RX")) == 0)
-  {
-    *(m_Cfg + 0) |= 3;
-    SetChannelState(0, 1, 0);
-    m_TimerRX->start(6);
-  }
-  else if(message.compare(QString("stop RX")) == 0)
-  {
-    m_TimerRX->stop();
-  }
-  if(message.compare(QString("start FFT")) == 0)
-  {
-  }
-  else if(message.compare(QString("stop FFT")) == 0)
-  {
-  }
-  if(message.compare(QString("start TX")) == 0)
-  {
-    m_TimerTX->start(6);
-  }
-  else if(message.compare(QString("stop TX")) == 0)
-  {
-    m_TimerTX->stop();
-    bufferFloatt = m_BufferTX;
-    for(i = 0; i < 512; ++i) *(bufferFloatt++) = 0;
-  }
-}
-
-//------------------------------------------------------------------------------
-
 void Server::on_TimerRX_timeout()
 {
   int32_t i, offset, position, error;
-  int32_t *pointerFloatt;
+  int32_t *pointerInt;
   float *bufferFloat, *pointerFloat;
 
   position = *(m_Sts + 0);
@@ -168,22 +135,21 @@ void Server::on_TimerRX_timeout()
     offset = m_LimitRX > 0 ? 0 : 512;
     m_LimitRX += 256;
     if(m_LimitRX == 512) m_LimitRX = 0;
-    pointerFloatt = m_BufferRX + offset;
+    pointerInt = m_BufferRX + offset;
     bufferFloat = (float *)(m_InputBufferRX->constData());
     pointerFloat = bufferFloat;
     for(i = 0; i < 512; ++i)
     {
-      *(pointerFloat++) = ((float) *(pointerFloatt++)) / 2147483647.0;
+      *(pointerFloat++) = ((float) *(pointerInt++)) / 2147483647.0;
     }
     fexchange0(0, bufferFloat, bufferFloat + 512, &error);
     src_process(m_StateRX, m_DataRX) ;
     pointerFloat = bufferFloat + 1024;
-    for(i = 0; i < m_DataRX->output_frames_gen; ++i)
+    for(i = 0; i < m_DataRX->output_frames_gen * 2; ++i)
     {
       *(m_PointerRX++) = (int16_t)(*(pointerFloat++) * 32767.0);
-      *(m_PointerRX++) = (int16_t)(*(pointerFloat++) * 32767.0);
       ++m_CounterRX;
-      if(m_CounterRX == 1024)
+      if(m_CounterRX == 2048)
       {
         m_CounterRX = 0;
         m_PointerRX = (int16_t *)(m_OutputBufferRX->constData() + 4);
@@ -198,7 +164,9 @@ void Server::on_TimerRX_timeout()
 void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
 {
   int32_t i, size;
-  float *bufferReal, *bufferComplex, value;
+  uint32_t command, value;
+  int32_t *pointerInt;
+  float *bufferReal, *bufferComplex;
 /*
   size = txa[0].size;
   bufferReal = (float *)(message.constData());
@@ -206,11 +174,89 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
 
   for(i = 0; i < size; ++i)
   {
-    value = *(bufferReal++);
-    *(bufferComplex++) = value;
-    *(bufferComplex++) = value;
+    *(bufferComplex++) = *(bufferReal);
+    *(bufferComplex++) = *(bufferReal++);
   }
 */
+  command = *(uint32_t *)(message.constData());
+
+  switch(command)
+  {
+    case 0:
+      // start RX
+      *(m_Cfg + 0) |= 3;
+      SetChannelState(0, 1, 0);
+      m_TimerRX->start(6);
+      break;
+    case 1:
+      // stop RX
+      m_TimerRX->stop();
+      break;
+    case 2:
+      // start FFT
+      break;
+    case 3:
+      // stop FFT
+      break;
+    case 4:
+      // start TX
+      m_TimerTX->start(6);
+      break;
+    case 5:
+      // stop TX
+      m_TimerTX->stop();
+      pointerInt = m_BufferTX;
+      for(i = 0; i < 512; ++i) *(pointerInt++) = 0;
+      break;
+    case 6:
+      value = *(uint32_t *)(message.constData() + 4);
+      switch(value)
+      {
+        case 0:
+        m_FreqMin = 25000;
+        *(m_Cfg + 0) &= ~8;
+        *(m_Cfg + 1) = 1250;
+        *(m_Cfg + 0) |= 8;
+        break;
+        case 1:
+        m_FreqMin = 50000;
+        *(m_Cfg + 0) &= ~8;
+        *(m_Cfg + 1) = 625;
+        *(m_Cfg + 0) |= 8;
+        break;
+        case 2:
+        m_FreqMin = 125000;
+        *(m_Cfg + 0) &= ~8;
+        *(m_Cfg + 1) = 250;
+        *(m_Cfg + 0) |= 8;
+        break;
+        case 3:
+        m_FreqMin = 250000;
+        *(m_Cfg + 0) &= ~8;
+        *(m_Cfg + 1) = 125;
+        *(m_Cfg + 0) |= 8;
+        break;
+      }
+      break;
+    case 7:
+      // set RX frequency
+      value = *(uint32_t *)(message.constData() + 4);
+      if(value < 10000 || value > 50000000) break;
+      *(m_Cfg + 2) = (uint32_t)floor(value/125.0e6*(1<<30)+0.5);
+      break;
+    case 8:
+      // set FFT frequency
+      value = *(uint32_t *)(message.constData() + 4);
+      if(value < m_FreqMin || value > 50000000) break;
+      *(m_Cfg + 3) = (uint32_t)floor(value/125.0e6*(1<<30)+0.5);
+      break;
+    case 9:
+      // set TX frequency
+      value = *(uint32_t *)(message.constData() + 4);
+      if(value < 10000 || value > 50000000) break;
+      *(m_Cfg + 4) = (uint32_t)floor(value/125.0e6*(1<<30)+0.5);
+      break;
+  }
 }
 
 //------------------------------------------------------------------------------
@@ -218,7 +264,7 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
 void Server::on_TimerTX_timeout()
 {
   int32_t i, offset, position;
-  int32_t *bufferFloatt;
+  int32_t *pointerInt;
   float *bufferFloat;
 
   position = *(m_Sts + 2);
@@ -227,12 +273,11 @@ void Server::on_TimerTX_timeout()
     offset = m_LimitTX > 0 ? 0 : 512;
     m_LimitTX += 256;
     if(m_LimitTX == 512) m_LimitTX = 0;
-    bufferFloatt = m_BufferTX + offset;
+    pointerInt = m_BufferTX + offset;
     bufferFloat = txa[1].outbuff + m_InputOffsetTX;
-    for(i = 0; i < 256; ++i)
+    for(i = 0; i < 512; ++i)
     {
-      *(bufferFloatt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
-      *(bufferFloatt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
+      *(pointerInt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
     }
     m_InputOffsetTX += 256;
     if(m_InputOffsetTX == 4096)
@@ -263,7 +308,6 @@ void Server::on_WebSocketServer_newConnection()
     return;
   }
 
-  connect(webSocket, SIGNAL(textMessageReceived(QString)), this, SLOT(on_WebSocket_textMessageReceived(QString)));
   connect(webSocket, SIGNAL(binaryMessageReceived(QByteArray)), this, SLOT(on_WebSocket_binaryMessageReceived(QByteArray)));
   connect(webSocket, SIGNAL(disconnected()), this, SLOT(on_WebSocket_disconnected()));
 

@@ -53,12 +53,17 @@ Client::Client(QWidget *parent):
   m_LevelRX(0), m_LevelTX(0), m_Range(0), m_Offset(0), m_Plotter(0),
   m_Address(0), m_Connect(0), m_EnableRX(0), m_EnableTX(0), m_EnableFFT(0),
   m_InputDevice(0), m_OutputDevice(0),
+  m_BufferCmd(0), m_PointerCmd(0),
   m_AudioFormat(0), m_AudioInput(0), m_AudioOutput(0),
   m_AudioInputDevice(0), m_AudioOutputDevice(0),
   m_WebSocket(0)
 {
   CustomUiLoader loader;
   QString buffer;
+
+  m_BufferCmd = new QByteArray();
+  m_BufferCmd->resize(48);
+  m_PointerCmd = m_BufferCmd->constData();
 
   QFile file(":/forms/client.ui");
   file.open(QFile::ReadOnly);
@@ -84,11 +89,11 @@ Client::Client(QWidget *parent):
   m_EnableTX = findChild<QPushButton *>("EnableTX");
   m_EnableFFT = findChild<QPushButton *>("EnableFFT");
 
-	connect(m_IndicatorRX, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorRX_changed(int)));
-	connect(m_Plotter, SIGNAL(NewDemodFreq(int)), this, SLOT(on_FrequencyRX_changed(int)));
-	connect(m_IndicatorFFT, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorFFT_changed(int)));
-	connect(m_Range, SIGNAL(valueChanged(int)), this, SLOT(on_Range_changed(int)));
-	connect(m_Offset, SIGNAL(valueChanged(int)), this, SLOT(on_Offset_changed(int)));
+  connect(m_IndicatorRX, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorRX_changed(int)));
+  connect(m_Plotter, SIGNAL(NewDemodFreq(int)), this, SLOT(on_FrequencyRX_changed(int)));
+  connect(m_IndicatorFFT, SIGNAL(valueChanged(int)), this, SLOT(on_IndicatorFFT_changed(int)));
+  connect(m_Range, SIGNAL(valueChanged(int)), this, SLOT(on_Range_changed(int)));
+  connect(m_Offset, SIGNAL(valueChanged(int)), this, SLOT(on_Offset_changed(int)));
 
   m_IndicatorRX->setValue(600000);
   m_IndicatorRX->setFrameShape(QFrame::Panel);
@@ -161,37 +166,29 @@ Client::~Client()
 
 //------------------------------------------------------------------------------
 
+void Client::SendCommand()
+{
+  if(m_WebSocket) m_WebSocket->sendBinaryMessage(*m_BufferCmd);
+}
+
+//------------------------------------------------------------------------------
+
 void Client::on_EnableRX_clicked()
 {
   if(m_EnableRX->isChecked())
   {
-    m_WebSocket->sendTextMessage(QString("start RX"));
+    *(uint32_t *)(m_PointerCmd + 0) = 0;
     m_EnableRX->setText(QString("OFF"));
     m_AudioOutputDevice = m_AudioOutput->start();
   }
   else
   {
-    m_WebSocket->sendTextMessage(QString("stop RX"));
+    *(uint32_t *)(m_PointerCmd + 0) = 1;
     m_EnableRX->setText(QString("ON"));
     m_AudioOutput->stop();
     m_AudioOutputDevice = 0;
   }
-}
-
-//------------------------------------------------------------------------------
-
-void Client::on_EnableTX_clicked()
-{
-  if(m_EnableTX->isChecked())
-  {
-    m_WebSocket->sendTextMessage(QString("start TX"));
-    m_EnableTX->setText(QString("OFF"));
-  }
-  else
-  {
-    m_WebSocket->sendTextMessage(QString("stop TX"));
-    m_EnableTX->setText(QString("ON"));
-  }
+  SendCommand();
 }
 
 //------------------------------------------------------------------------------
@@ -200,14 +197,32 @@ void Client::on_EnableFFT_clicked()
 {
   if(m_EnableFFT->isChecked())
   {
-    m_WebSocket->sendTextMessage(QString("start FFT"));
+    *(uint32_t *)(m_PointerCmd + 0) = 2;
     m_EnableFFT->setText(QString("OFF"));
   }
   else
   {
-    m_WebSocket->sendTextMessage(QString("stop FFT"));
+    *(uint32_t *)(m_PointerCmd + 0) = 3;
     m_EnableFFT->setText(QString("ON"));
   }
+  SendCommand();
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_EnableTX_clicked()
+{
+  if(m_EnableTX->isChecked())
+  {
+    *(uint32_t *)(m_PointerCmd + 0) = 4;
+    m_EnableTX->setText(QString("OFF"));
+  }
+  else
+  {
+    *(uint32_t *)(m_PointerCmd + 0) = 5;
+    m_EnableTX->setText(QString("ON"));
+  }
+  SendCommand();
 }
 
 //------------------------------------------------------------------------------
@@ -303,23 +318,26 @@ void Client::on_AudioOutput_notify()
 
 void Client::on_IndicatorRX_changed(int freq)
 {
-	m_Plotter->SetDemodCenterFreq(freq);
-	m_Plotter->UpdateOverlay();
+  m_Plotter->SetDemodCenterFreq(freq);
+  m_Plotter->UpdateOverlay();
+  *(uint32_t *)(m_PointerCmd + 0) = 7;
+  *(uint32_t *)(m_PointerCmd + 4) = freq;
+  SendCommand();
 }
 
 //------------------------------------------------------------------------------
 
 void Client::on_FrequencyRX_changed(int freq)
 {
-	m_IndicatorRX->setValue(freq);
+  m_IndicatorRX->setValue(freq);
 }
 
 //------------------------------------------------------------------------------
 
 void Client::on_IndicatorFFT_changed(int freq)
 {
-	m_Plotter->SetCenterFreq(freq);
-	m_Plotter->UpdateOverlay();
+  m_Plotter->SetCenterFreq(freq);
+  m_Plotter->UpdateOverlay();
 }
 
 //------------------------------------------------------------------------------
@@ -339,7 +357,7 @@ void Client::on_Range_changed(int range)
   }
   m_Plotter->SetMaxdB(-200 + offset*5 + step*12);
   m_Plotter->SetdBStepSize(step);
-	m_Plotter->UpdateOverlay();
+  m_Plotter->UpdateOverlay();
 }
 
 //------------------------------------------------------------------------------
@@ -358,5 +376,5 @@ void Client::on_Offset_changed(int offset)
   }
   m_Plotter->SetMaxdB(-200 + offset*5 + step*12);
   m_Plotter->SetdBStepSize(step);
-	m_Plotter->UpdateOverlay();
+  m_Plotter->UpdateOverlay();
 }

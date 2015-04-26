@@ -26,7 +26,6 @@ private slots:
   void on_TimerTX_timeout();
   void on_WebSocketServer_closed();
   void on_WebSocketServer_newConnection();
-  void on_WebSocket_textMessageReceived(QString message);
   void on_WebSocket_binaryMessageReceived(QByteArray message);
   void on_WebSocket_disconnected();
 
@@ -39,6 +38,7 @@ private:
   QByteArray *m_OutputBufferRX;
   uint32_t m_CounterRX;
   int16_t *m_PointerRX;
+  uint32_t m_FreqMin;
   SRC_STATE *m_StateRX;
   SRC_DATA *m_DataRX;
   QTimer *m_TimerRX;

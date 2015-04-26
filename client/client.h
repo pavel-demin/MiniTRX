@@ -45,6 +45,7 @@ private slots:
   void on_Connect_clicked();
 
 private:
+  void SendCommand();
 
   Indicator *m_IndicatorRX;
   Indicator *m_IndicatorTX;
@@ -64,6 +65,9 @@ private:
 
   QComboBox *m_InputDevice;
   QComboBox *m_OutputDevice;
+
+  QByteArray *m_BufferCmd;
+  const char *m_PointerCmd;
 
   QAudioFormat *m_AudioFormat;
   QAudioInput *m_AudioInput;
