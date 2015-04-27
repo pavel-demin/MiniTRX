@@ -78,6 +78,11 @@ typedef struct _emnr
 		float eps_floor;
 		float gamma_max;
 		float q;
+		float gmax;
+		//
+		float* GG;
+		float* GGS;
+		FILE* fileb;
 	} g;
 	struct _npest
 	{

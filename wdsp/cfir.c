@@ -224,7 +224,7 @@ float* cfir_impulse (int N, int DD, int R, int Pairs, float runrate, float cicra
 			A[i] = A[u_samps - j];
 
 	// print_response ("cfirResponse.txt", N, A);
-	impulse = fir_fsamp(N, A, rtype, 1.0);
+	impulse = fir_fsamp(N, A, rtype, 1.0, -1);
 	// print_impulse ("cfirImpulse.txt", N, impulse, 1, 0);
 	_aligned_free (A);
 	return impulse;

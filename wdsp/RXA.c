@@ -28,14 +28,14 @@ warren@wpratt.com
 
 void create_rxa (int channel)
 {
-	rxa[channel].mode = RXA_AM;
+	rxa[channel].mode = RXA_LSB;
 	rxa[channel].inbuff  = (float *) malloc0 (1 * ch[channel].dsp_insize  * sizeof (complex));
 	rxa[channel].outbuff = (float *) malloc0 (1 * ch[channel].dsp_outsize * sizeof (complex));
 	rxa[channel].midbuff = (float *) malloc0 (2 * ch[channel].dsp_size    * sizeof (complex));
 
 	// shift to select a slice of spectrum
 	rxa[channel].shift.p = create_shift (
-		0,												// run
+		1,												// run
 		ch[channel].dsp_insize,							// input buffer size
 		rxa[channel].inbuff,							// pointer to input buffer
 		rxa[channel].inbuff,							// pointer to output buffer
@@ -86,8 +86,8 @@ void create_rxa (int channel)
 		ch[channel].dsp_size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
-		-5000.0,										// lower filter frequency
-		+5000.0,										// upper filter frequency
+		-4150.0,										// lower filter frequency
+		-150.0,											// upper filter frequency
 		ch[channel].dsp_rate,							// sample rate
 		1,												// wintype
 		1.0);											// gain
@@ -139,7 +139,7 @@ void create_rxa (int channel)
 
 	// AM demod
 	rxa[channel].amd.p = create_amd (
-		1,												// run - OFF by default
+		0,												// run - OFF by default
 		ch[channel].dsp_size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
@@ -264,7 +264,7 @@ void create_rxa (int channel)
 		ch[channel].dsp_rate,							// samplerate
 		0,												// window type
 		1.0,											// gain
-		1,												// gain method
+		2,												// gain method
 		0,												// npe_method
 		1);												// ae_run
 
@@ -279,7 +279,7 @@ void create_rxa (int channel)
 		ch[channel].dsp_rate,							// sample rate
 		0.001,											// tau_attack
 		0.250,											// tau_decay
-		4,											// n_tau
+		4,												// n_tau
 		10000.0,										// max_gain
 		1.5,											// var_gain
 		1000.0,											// fixed_gain
@@ -288,7 +288,7 @@ void create_rxa (int channel)
 		0.250,											// tau_fast_backaverage
 		0.005,											// tau_fast_decay
 		5.0,											// pop_ratio
-		1,											// hang_enable
+		1,												// hang_enable
 		0.500,											// tau_hang_backmult
 		0.250,											// hangtime
 		0.250,											// hang_thresh
@@ -317,8 +317,8 @@ void create_rxa (int channel)
 		ch[channel].dsp_size,							// buffer size
 		rxa[channel].midbuff,							// pointer to input buffer
 		rxa[channel].midbuff,							// pointer to output buffer
-		-5000.0,										// lower filter frequency
-		+5000.0,										// upper filter frequency
+		-4150.0,										// lower filter frequency
+		-150.0,											// upper filter frequency
 		ch[channel].dsp_rate,							// sample rate
 		1,												// wintype
 		1.0);											// gain
@@ -556,5 +556,10 @@ void RXAbp1Check (int channel)
 		(rxa[channel].anf.p->run  == 1) ||
 		(rxa[channel].anr.p->run  == 1))	rxa[channel].bp1.p->run = 1;
 	else									rxa[channel].bp1.p->run = 0;
+	if ((rxa[channel].amd.p->run  == 1) ||
+		(rxa[channel].emnr.p->run == 1) ||
+		(rxa[channel].anf.p->run  == 1) ||
+		(rxa[channel].anr.p->run  == 1))	rxa[channel].bp1.p->gain = 2.0;
+	else									rxa[channel].bp1.p->gain = 1.0;
 	if (!old && rxa[channel].bp1.p->run) flush_bandpass (rxa[channel].bp1.p);
 }

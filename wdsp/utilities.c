@@ -42,8 +42,9 @@ void *malloc0 (int size)
 	return p;
 }
 
-#ifndef linux
 // Exported calls
+
+#ifndef linux
 
 PORT void
 *NewCriticalSection()
@@ -84,6 +85,24 @@ void print_impulse (const char* filename, int N, float* impulse, int rtype, int 
 	fprintf (file, "\n\n\n\n");
 	fflush (file);
 	fclose (file);
+}
+
+void print_peak_val (const char* filename, int N, float* buff, float thresh)
+{
+	int i;
+	static unsigned int seqnum;
+	float peak = 0.0;
+	FILE* file;
+	for (i = 0; i < N; i++)
+		if (buff[i] > peak) peak = buff[i];
+	if (peak >= thresh)
+	{
+		file = fopen(filename, "a");
+		fprintf(file, "%d\t\t%.17e\n", seqnum, peak);
+		fflush(file);
+		fclose(file);
+	}
+	seqnum++;
 }
 
 void print_peak_env (const char* filename, int N, float* buff, float thresh)

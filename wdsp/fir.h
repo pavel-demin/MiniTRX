@@ -26,8 +26,8 @@ warren@wpratt.com
 
 extern float* fftcv_mults (int NM, float* c_impulse);
 
-extern float* fir_fsamp_odd (int N, float* A, int rtype, float scale);
+extern float* fir_fsamp_odd (int N, float* A, int rtype, float scale, int wintype);
 
-extern float* fir_fsamp (int N, float* A, int rtype, float scale);
+extern float* fir_fsamp (int N, float* A, int rtype, float scale, int wintype);
 
 extern float* fir_bandpass (int N, float f_low, float f_high, float samplerate, int wintype, int rtype, float scale);

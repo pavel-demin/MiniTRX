@@ -42,11 +42,51 @@ float* fftcv_mults (int NM, float* c_impulse)
 	return mults;
 }
 
-float* fir_fsamp_odd (int N, float* A, int rtype, float scale)
+float* get_fsamp_window(int N, int wintype)
+{
+	int i;
+	float arg0, arg1;
+	float* window = (float *) malloc0 (N * sizeof(float));
+	switch (wintype)
+	{
+	case 0:
+		arg0 = 2.0 * PI / ((float)N - 1.0);
+		for (i = 0; i < N; i++)
+		{
+			arg1 = cos(arg0 * (float)i);
+			window[i]  =   +0.21747
+				+ arg1 *  (-0.45325
+				+ arg1 *  (+0.28256
+				+ arg1 *  (-0.04672)));
+		}
+		break;
+	case 1:
+		arg0 = 2.0 * PI / ((float)N - 1.0);
+		for (i = 0; i < N; ++i)
+		{
+			arg1 = cos(arg0 * (float)i);
+			window[i]  =   +6.3964424114390378e-02
+				+ arg1 *  (-2.3993864599352804e-01
+				+ arg1 *  (+3.5015956323820469e-01
+				+ arg1 *  (-2.4774111897080783e-01
+				+ arg1 *  (+8.5438256055858031e-02
+				+ arg1 *  (-1.2320203369293225e-02
+				+ arg1 *  (+4.3778825791773474e-04))))));
+		}
+		break;
+	default:
+		for (i = 0; i < N; i++)
+			window[i] = 1.0;
+	}
+	return window;
+}
+
+float* fir_fsamp_odd (int N, float* A, int rtype, float scale, int wintype)
 {
 	int i, j;
 	int mid = (N - 1) / 2;
 	float mag, phs;
+	float* window;
 	float *fcoef     = (float *) malloc0 (N * sizeof (complex));
 	float *c_impulse = (float *) malloc0 (N * sizeof (complex));
 	fftwf_plan ptmp = fftwf_plan_dft_1d(N, (fftwf_complex *)fcoef, (fftwf_complex *)c_impulse, FFTW_BACKWARD, FFTW_PATIENT);
@@ -66,27 +106,30 @@ float* fir_fsamp_odd (int N, float* A, int rtype, float scale)
 	fftwf_execute (ptmp);
 	fftwf_destroy_plan (ptmp);
 	_aligned_free (fcoef);
+	window = get_fsamp_window(N, wintype);
 	switch (rtype)
 	{
 	case 0:
 		for (i = 0; i < N; i++)
-			c_impulse[i] = scale * c_impulse[2 * i];
+			c_impulse[i] = scale * c_impulse[2 * i] * window[i];
 		break;
 	case 1:
 		for (i = 0; i < N; i++)
 		{
-			c_impulse[2 * i + 0] *= scale;
+			c_impulse[2 * i + 0] *= scale * window[i];
 			c_impulse[2 * i + 1] = 0.0;
 		}
 		break;
 	}
+	_aligned_free (window);
 	return c_impulse;
 }
 
-float* fir_fsamp (int N, float* A, int rtype, float scale)
+float* fir_fsamp (int N, float* A, int rtype, float scale, int wintype)
 {
 	int n, i, j, k;
 	float sum;
+	float* window;
 	float *c_impulse = (float *) malloc0 (N * sizeof (complex));
 
 	if (N & 1)
@@ -123,18 +166,19 @@ float* fir_fsamp (int N, float* A, int rtype, float scale)
 			c_impulse[2 * n + 1] = 0.0;
 		}
 	}
-
+	window = get_fsamp_window (N, wintype);
 	switch (rtype)
 	{
 	case 0:
 		for (i = 0; i < N; i++)
-			c_impulse[i] = scale * c_impulse[2 * i];
+			c_impulse[i] = scale * c_impulse[2 * i] * window[i];
 		break;
 	case 1:
 		for (i = 0; i < N; i += 2)
-			c_impulse[i] *= scale;
+			c_impulse[i] *= scale * window[i];
 		break;
 	}
+	_aligned_free (window);
 	return c_impulse;
 }
 

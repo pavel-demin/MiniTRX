@@ -82,9 +82,9 @@ float* fc_mults (int size, float f0, float f1, float g0, float g1, int curve, fl
 		}
 	}
 	if (method == 0)
-		impulse = fir_fsamp(size + 1, A, 1, 1.0);
+		impulse = fir_fsamp(size + 1, A, 1, 1.0, -1);
 	else
-		impulse = fir_fsamp_odd(size + 1, A, 1, 1.0);
+		impulse = fir_fsamp_odd(size + 1, A, 1, 1.0, -1);
 	// print_impulse ("emph.txt", size + 1, impulse, 1, 0);
 	mults = fftcv_mults(2 * size, impulse);
 	_aligned_free (impulse);

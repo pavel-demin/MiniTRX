@@ -81,9 +81,10 @@ float* eq_mults (int size, int nfreqs, float* F, float* G, float samplerate, flo
 		}
 	}
 	if (method == 0)
-		impulse = fir_fsamp(size + 1, A, 1, 1.0);
+		impulse = fir_fsamp(size + 1, A, 1, 1.0, -1);
 	else
-		impulse = fir_fsamp_odd(size + 1, A, 1, 1.0);
+		impulse = fir_fsamp_odd(size + 1, A, 1, 1.0, -1);
+	// print_impulse("eq.txt", size + 1, impulse, 1, 0);
 	mults = fftcv_mults(2 * size, impulse);
 	_aligned_free (impulse);
 	_aligned_free (A);
