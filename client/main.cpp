@@ -1,13 +1,18 @@
 #include <QtWidgets/QApplication>
-#include <QtUiTools>
+#include <QQmlContext>
+#include <QQuickView>
 
 #include "client.h"
 
 int main(int argc, char *argv[])
 {
-  Q_INIT_RESOURCE(client);
   QApplication app(argc, argv);
+  QQuickView view;
   Client client;
-  client.show();
+
+  view.rootContext()->setContextProperty("client", &client);
+  view.setSource(QUrl("qrc:/MiniTRX-client.qml"));
+  view.show();
+
   return app.exec();
 }

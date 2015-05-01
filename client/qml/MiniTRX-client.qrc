@@ -1,0 +1,9 @@
+<RCC>
+  <qresource prefix="/">
+    <file>MiniTRX-client.qml</file>
+    <file>Indicator.qml</file>
+    <file>TabMain.qml</file>
+    <file>TabRX.qml</file>
+    <file>TabTX.qml</file>
+  </qresource>
+</RCC>

@@ -1,11 +1,11 @@
 TARGET = MiniTRX-client
 TEMPLATE = app
-QT += uitools multimedia websockets
+QT += qml quick multimedia websockets
 CONFIG += static
 QMAKE_LFLAGS += -static
 OBJECTS_DIR = build
 MOC_DIR = build
 RCC_DIR = build
-RESOURCES = client.qrc
-HEADERS = client.h indicator.h plotter.h
-SOURCES = client.cpp indicator.cpp plotter.cpp main.cpp
+RESOURCES = qml/MiniTRX-client.qrc
+HEADERS = client.h
+SOURCES = client.cpp main.cpp

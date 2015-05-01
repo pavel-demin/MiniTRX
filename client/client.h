@@ -1,71 +1,55 @@
 #ifndef Client_h
 #define Client_h
 
-#include <QtWidgets/QWidget>
+#include <QObject>
 
-class QPushButton;
-class QProgressBar;
-class QSlider;
-class QComboBox;
-class QLineEdit;
-class QAudioFormat;
-class QAudioOutput;
-class QAudioInput;
 class QByteArray;
+class QAudioFormat;
+class QAudioInput;
+class QAudioOutput;
 class QIODevice;
 class QWebSocket;
-class Indicator;
-class CPlotter;
 
-class Client: public QWidget
+class Client: public QObject
 {
   Q_OBJECT
 
 public:
-  Client(QWidget *parent = 0);
+  Client(QObject *parent = 0);
   virtual ~Client();
 
+public slots:
+  void on_Connect_clicked(QString address);
+  void on_Disconnect_clicked();
+  void on_StartRX_clicked();
+  void on_StopRX_clicked();
+  void on_StartTX_clicked();
+  void on_StopTX_clicked();
+  void on_StartFFT_clicked();
+  void on_StopFFT_clicked();
+
 private slots:
+/*
   void on_IndicatorRX_changed(int freq);
   void on_FrequencyRX_changed(int freq);
   void on_IndicatorFFT_changed(int freq);
   void on_IndicatorTX_changed(int freq);
   void on_Range_changed(int range);
   void on_Offset_changed(int offset);
+*/
   void on_InputDevice_activated(int index);
   void on_OutputDevice_activated(int index);
   void on_AudioInput_notify();
   void on_AudioOutput_notify();
+
   void on_WebSocket_connected();
   void on_WebSocket_disconnected();
   void on_WebSocket_binaryMessageReceived(QByteArray message);
 
-  void on_EnableRX_clicked();
-  void on_EnableTX_clicked();
-  void on_EnableFFT_clicked();
-  void on_Connect_clicked();
-
 private:
-  void SendCommand();
+  void sendCommand();
 
-  Indicator *m_IndicatorRX;
-  Indicator *m_IndicatorTX;
-  Indicator *m_IndicatorFFT;
-  QProgressBar *m_LevelRX;
-  QProgressBar *m_LevelTX;
-  QSlider *m_Range;
-  QSlider *m_Offset;
-  CPlotter *m_Plotter;
-
-  QLineEdit *m_Address;
-
-  QPushButton *m_Connect;
-  QPushButton *m_EnableRX;
-  QPushButton *m_EnableTX;
-  QPushButton *m_EnableFFT;
-
-  QComboBox *m_InputDevice;
-  QComboBox *m_OutputDevice;
+  QObject *m_Root;
 
   QByteArray *m_BufferCmd;
   const char *m_PointerCmd;
