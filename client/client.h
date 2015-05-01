@@ -29,6 +29,7 @@ private slots:
   void on_IndicatorRX_changed(int freq);
   void on_FrequencyRX_changed(int freq);
   void on_IndicatorFFT_changed(int freq);
+  void on_IndicatorTX_changed(int freq);
   void on_Range_changed(int range);
   void on_Offset_changed(int offset);
   void on_InputDevice_activated(int index);

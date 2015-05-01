@@ -177,13 +177,13 @@ void Client::on_EnableRX_clicked()
 {
   if(m_EnableRX->isChecked())
   {
-    *(uint32_t *)(m_PointerCmd + 0) = 0;
+    *(uint32_t *)(m_PointerCmd + 0) = 1;
     m_EnableRX->setText(QString("OFF"));
     m_AudioOutputDevice = m_AudioOutput->start();
   }
   else
   {
-    *(uint32_t *)(m_PointerCmd + 0) = 1;
+    *(uint32_t *)(m_PointerCmd + 0) = 2;
     m_EnableRX->setText(QString("ON"));
     m_AudioOutput->stop();
     m_AudioOutputDevice = 0;
@@ -197,12 +197,12 @@ void Client::on_EnableFFT_clicked()
 {
   if(m_EnableFFT->isChecked())
   {
-    *(uint32_t *)(m_PointerCmd + 0) = 2;
+    *(uint32_t *)(m_PointerCmd + 0) = 3;
     m_EnableFFT->setText(QString("OFF"));
   }
   else
   {
-    *(uint32_t *)(m_PointerCmd + 0) = 3;
+    *(uint32_t *)(m_PointerCmd + 0) = 4;
     m_EnableFFT->setText(QString("ON"));
   }
   SendCommand();
@@ -214,12 +214,12 @@ void Client::on_EnableTX_clicked()
 {
   if(m_EnableTX->isChecked())
   {
-    *(uint32_t *)(m_PointerCmd + 0) = 4;
+    *(uint32_t *)(m_PointerCmd + 0) = 5;
     m_EnableTX->setText(QString("OFF"));
   }
   else
   {
-    *(uint32_t *)(m_PointerCmd + 0) = 5;
+    *(uint32_t *)(m_PointerCmd + 0) = 6;
     m_EnableTX->setText(QString("ON"));
   }
   SendCommand();
@@ -320,7 +320,7 @@ void Client::on_IndicatorRX_changed(int freq)
 {
   m_Plotter->SetDemodCenterFreq(freq);
   m_Plotter->UpdateOverlay();
-  *(uint32_t *)(m_PointerCmd + 0) = 7;
+  *(uint32_t *)(m_PointerCmd + 0) = 8;
   *(uint32_t *)(m_PointerCmd + 4) = freq;
   SendCommand();
 }
@@ -338,6 +338,16 @@ void Client::on_IndicatorFFT_changed(int freq)
 {
   m_Plotter->SetCenterFreq(freq);
   m_Plotter->UpdateOverlay();
+  *(uint32_t *)(m_PointerCmd + 0) = 8;
+  *(uint32_t *)(m_PointerCmd + 4) = freq;
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_IndicatorTX_changed(int freq)
+{
+  *(uint32_t *)(m_PointerCmd + 0) = 9;
+  *(uint32_t *)(m_PointerCmd + 4) = freq;
 }
 
 //------------------------------------------------------------------------------

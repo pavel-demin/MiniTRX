@@ -97,11 +97,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <height>31</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>&lt;</string>
      </property>
@@ -114,11 +109,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <width>31</width>
        <height>31</height>
       </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>&gt;</string>
@@ -133,11 +123,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <height>211</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
      <property name="title">
       <string>RX</string>
      </property>
@@ -149,11 +134,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>211</width>
         <height>21</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -168,11 +148,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>21</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
      </widget>
      <widget class="QLabel" name="label_12">
       <property name="geometry">
@@ -182,11 +157,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>71</width>
         <height>16</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Device</string>
@@ -201,11 +171,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>16</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Modulation</string>
       </property>
@@ -219,11 +184,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>16</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Filter</string>
       </property>
@@ -236,11 +196,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>31</width>
         <height>31</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>ON</string>
@@ -274,11 +229,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>21</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
      </widget>
      <widget class="QComboBox" name="FilterRX">
       <property name="geometry">
@@ -289,11 +239,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>21</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
      </widget>
      <widget class="QProgressBar" name="LevelRX">
       <property name="geometry">
@@ -303,11 +248,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>211</width>
         <height>11</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">* {border-radius: 0px; text-align: center}
@@ -333,11 +273,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <height>211</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
      <property name="title">
       <string>TX</string>
      </property>
@@ -349,11 +284,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>211</width>
         <height>21</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -368,11 +298,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>21</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
      </widget>
      <widget class="QLabel" name="label_2">
       <property name="geometry">
@@ -382,11 +307,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>101</width>
         <height>16</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Filter</string>
@@ -400,11 +320,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>101</width>
         <height>16</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Modulation</string>
@@ -435,11 +350,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>16</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Device</string>
       </property>
@@ -452,11 +362,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>31</width>
         <height>31</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>ON</string>
@@ -473,11 +378,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>211</width>
         <height>11</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="styleSheet">
        <string notr="true">* {border-radius: 0px; text-align: center}
@@ -499,11 +399,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>21</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
      </widget>
      <widget class="QComboBox" name="ModulationTX">
       <property name="geometry">
@@ -513,11 +408,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>101</width>
         <height>21</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
      </widget>
     </widget>
@@ -530,13 +420,8 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <height>161</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
      <property name="title">
-      <string>Spectrum</string>
+      <string>Panadapter</string>
      </property>
      <widget class="QPushButton" name="EnableFFT">
       <property name="geometry">
@@ -546,11 +431,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>31</width>
         <height>31</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>ON</string>
@@ -584,11 +464,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>16</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Offset</string>
       </property>
@@ -601,11 +476,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>101</width>
         <height>21</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="minimum">
        <number>0</number>
@@ -635,11 +505,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>16</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Bandwidth</string>
       </property>
@@ -653,11 +518,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>21</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
      </widget>
      <widget class="QLabel" name="label_25">
       <property name="geometry">
@@ -667,11 +527,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>101</width>
         <height>16</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="text">
        <string>Freq. corr. (ppm)</string>
@@ -685,11 +540,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>101</width>
         <height>22</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="alignment">
        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -713,11 +563,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <height>16</height>
        </rect>
       </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
-      </property>
       <property name="text">
        <string>Range</string>
       </property>
@@ -730,11 +575,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
         <width>101</width>
         <height>21</height>
        </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>10</pointsize>
-       </font>
       </property>
       <property name="minimum">
        <number>0</number>
@@ -765,11 +605,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <height>31</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>Connect</string>
      </property>
@@ -786,11 +621,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <height>16</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>IP address</string>
      </property>
@@ -803,11 +633,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <width>101</width>
        <height>20</height>
       </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>192.168.1.5</string>
@@ -822,11 +647,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <height>31</height>
       </rect>
      </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
-     </property>
      <property name="text">
       <string>TX&gt;</string>
      </property>
@@ -839,11 +659,6 @@ QTabBar::tab:!selected {margin-bottom: 2px;}</string>
        <width>31</width>
        <height>31</height>
       </rect>
-     </property>
-     <property name="font">
-      <font>
-       <pointsize>10</pointsize>
-      </font>
      </property>
      <property name="text">
       <string>RX&gt;</string>
