@@ -23,6 +23,7 @@ public:
 
 private slots:
   void on_TimerRX_timeout();
+  void on_TimerFFT_timeout();
   void on_TimerTX_timeout();
   void on_WebSocketServer_closed();
   void on_WebSocketServer_newConnection();
@@ -30,18 +31,22 @@ private slots:
   void on_WebSocket_disconnected();
 
 private:
-  uint32_t *m_Cfg, *m_Sts;
+  uint32_t *m_Cfg;
+  uint16_t *m_Sts;
   int32_t *m_BufferRX, *m_BufferTX, *m_BufferFFT;
   int m_LimitRX, m_InputOffsetRX;
   int m_LimitTX, m_InputOffsetTX;
   QByteArray *m_InputBufferRX;
   QByteArray *m_OutputBufferRX;
-  uint32_t m_CounterRX;
+  QByteArray *m_InputBufferFFT;
+  QByteArray *m_OutputBufferFFT;
+  int32_t m_CounterRX;
   int16_t *m_PointerRX;
-  uint32_t m_FreqMin;
+  int32_t m_FreqMin;
   SRC_STATE *m_StateRX;
   SRC_DATA *m_DataRX;
   QTimer *m_TimerRX;
+  QTimer *m_TimerFFT;
   QTimer *m_TimerTX;
   QWebSocketServer *m_WebSocketServer;
   QWebSocket *m_WebSocket;

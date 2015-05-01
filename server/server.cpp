@@ -34,15 +34,17 @@ Server::Server(int16_t port, QObject *parent):
   m_LimitRX(256), m_InputOffsetRX(0),
   m_LimitTX(0), m_InputOffsetTX(0),
   m_InputBufferRX(0), m_OutputBufferRX(0),
+  m_InputBufferFFT(0), m_OutputBufferFFT(0), 
   m_CounterRX(0), m_PointerRX(0), m_FreqMin(25000),
   m_StateRX(0), m_DataRX(0),
-  m_TimerRX(0), m_TimerTX(0),
+  m_TimerRX(0), m_TimerFFT(0), m_TimerTX(0),
   m_WebSocketServer(0), m_WebSocket(0)
 {
   int memFile;
   FILE *wisdomFile;
   int32_t i, *pointerInt, error;
   float *pointerFloat;
+  int rc;
 
   if((memFile = open("/dev/mem", O_RDWR)) < 0)
   {
@@ -51,7 +53,7 @@ Server::Server(int16_t port, QObject *parent):
   }
 
   m_Cfg = (uint32_t *)mmap(NULL, sysconf(_SC_PAGESIZE), PROT_READ|PROT_WRITE, MAP_SHARED, memFile, 0x40000000);
-  m_Sts = (uint32_t *)mmap(NULL, sysconf(_SC_PAGESIZE), PROT_READ|PROT_WRITE, MAP_SHARED, memFile, 0x40001000);
+  m_Sts = (uint16_t *)mmap(NULL, sysconf(_SC_PAGESIZE), PROT_READ|PROT_WRITE, MAP_SHARED, memFile, 0x40001000);
   m_BufferRX = (int32_t *)mmap(NULL, sysconf(_SC_PAGESIZE), PROT_READ|PROT_WRITE, MAP_SHARED, memFile, 0x40002000);
   m_BufferTX = (int32_t *)mmap(NULL, sysconf(_SC_PAGESIZE), PROT_READ|PROT_WRITE, MAP_SHARED, memFile, 0x40003000);
   m_BufferFFT = (int32_t *)mmap(NULL, 8*sysconf(_SC_PAGESIZE), PROT_READ|PROT_WRITE, MAP_SHARED, memFile, 0x40010000);
@@ -71,20 +73,32 @@ Server::Server(int16_t port, QObject *parent):
   }
   OpenChannel(0, 256, 4096, 20000, 20000, 20000, 0, 0, 0.010, 0.025, 0.000, 0.010, 0);
   OpenChannel(1, 256, 4096, 20000, 20000, 20000, 1, 0, 0.010, 0.025, 0.000, 0.010, 0);
+  XCreateAnalyzer(0, &rc, 4096, 1, 1, 0);
   if((wisdomFile = fopen("wdsp-fftw-wisdom.txt", "w")))
   {
     fftwf_export_wisdom_to_file(wisdomFile);
     fclose(wisdomFile);
   }
 
+  SetRXAShiftRun(0, 0);
+  SetRXAAMDRun(0, 1);
+  SetRXAMode(0, RXA_AM);
+  SetRXABandpassFreqs(0, -5000.0, 5000.0);
   SetRXAAGCFixed(0, 40.0);
   SetRXAAGCTop(0, 40.0);
+  SetRXAEMNRRun(0, 1);
 
   m_InputBufferRX = new QByteArray();
   m_InputBufferRX->resize(1590 * sizeof(float));
 
   m_OutputBufferRX = new QByteArray();
   m_OutputBufferRX->resize(2048 * sizeof(int16_t) + 4);
+
+  m_InputBufferFFT = new QByteArray();
+  m_InputBufferFFT->resize(8192 * sizeof(float));
+
+  m_OutputBufferFFT = new QByteArray();
+  m_OutputBufferFFT->resize(4096 * sizeof(float) + 4);
 
   m_PointerRX = (int16_t *)(m_OutputBufferRX->constData() + 4);
 
@@ -100,6 +114,9 @@ Server::Server(int16_t port, QObject *parent):
   m_DataRX->output_frames = 283 ;
   m_DataRX->src_ratio = 22050.0/20000.0;
   m_DataRX->end_of_input = 0;
+
+  m_TimerRX = new QTimer(this);
+  connect(m_TimerRX, SIGNAL(timeout()), this, SLOT(on_TimerRX_timeout()));
 
   m_TimerRX = new QTimer(this);
   connect(m_TimerRX, SIGNAL(timeout()), this, SLOT(on_TimerRX_timeout()));
@@ -161,12 +178,37 @@ void Server::on_TimerRX_timeout()
 
 //------------------------------------------------------------------------------
 
+void Server::on_TimerFFT_timeout()
+{
+  int32_t i;
+  int32_t *pointerInt;
+  float *pointerFloat;
+  int rc;
+
+  pointerInt = m_BufferFFT;
+  pointerFloat = (float *)(m_InputBufferFFT->constData());
+  for(i = 0; i < 8192; ++i)
+  {
+    *(pointerFloat++) = ((float) *(pointerInt++)) / 2147483647.0;
+  }
+  GetPixels(0, (float *)(m_OutputBufferFFT->constData() + 4), &rc);
+  if(rc && m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferFFT);
+  Spectrum2(0, 0, 0, pointerFloat);
+  *(m_Cfg + 0) &= ~16;
+  *(m_Cfg + 0) |= 16;
+}
+
+//------------------------------------------------------------------------------
+
 void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
 {
   int32_t i, size;
-  uint32_t command, value;
+  int32_t command;
+  int32_t *dataInt;
+  float *dataFloat;
   int32_t *pointerInt;
   float *bufferReal, *bufferComplex;
+  int flp = 1;
 /*
   size = txa[0].size;
   bufferReal = (float *)(message.constData());
@@ -178,83 +220,144 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
     *(bufferComplex++) = *(bufferReal++);
   }
 */
-  command = *(uint32_t *)(message.constData());
+  command = *(int32_t *)(message.constData() + 0);
+  dataInt = (int32_t *)(message.constData() + 4);
+  dataFloat = (float *)(message.constData() + 4);
 
   switch(command)
   {
     case 0:
+      // TX data
+      break;
+    case 1:
       // start RX
       *(m_Cfg + 0) |= 3;
       SetChannelState(0, 1, 0);
       m_TimerRX->start(6);
       break;
-    case 1:
+    case 2:
       // stop RX
       m_TimerRX->stop();
       break;
-    case 2:
-      // start FFT
-      break;
     case 3:
-      // stop FFT
+      // start FFT
+      *(m_Cfg + 0) |= 29;
+      SetAnalyzer(0, 1, 1, &flp, 4096, 4096, 4, 14.0, 0, 0, 0, 0, 600, 1, 0, 2, 0.8, 0, 0.0, 0.0, 0);
+      m_TimerFFT->start(100);
       break;
     case 4:
+      // stop FFT
+      m_TimerFFT->stop();
+      break;
+    case 5:
       // start TX
       m_TimerTX->start(6);
       break;
-    case 5:
+    case 6:
       // stop TX
       m_TimerTX->stop();
       pointerInt = m_BufferTX;
       for(i = 0; i < 512; ++i) *(pointerInt++) = 0;
       break;
-    case 6:
-      value = *(uint32_t *)(message.constData() + 4);
-      switch(value)
+    case 7:
+      switch(dataInt[0])
       {
         case 0:
-        m_FreqMin = 25000;
-        *(m_Cfg + 0) &= ~8;
-        *(m_Cfg + 1) = 1250;
-        *(m_Cfg + 0) |= 8;
-        break;
+          m_FreqMin = 25000;
+          *(m_Cfg + 0) &= ~8;
+          *(m_Cfg + 1) = 1250;
+          *(m_Cfg + 0) |= 8;
+          break;
         case 1:
-        m_FreqMin = 50000;
-        *(m_Cfg + 0) &= ~8;
-        *(m_Cfg + 1) = 625;
-        *(m_Cfg + 0) |= 8;
-        break;
+          m_FreqMin = 50000;
+          *(m_Cfg + 0) &= ~8;
+          *(m_Cfg + 1) = 625;
+          *(m_Cfg + 0) |= 8;
+          break;
         case 2:
-        m_FreqMin = 125000;
-        *(m_Cfg + 0) &= ~8;
-        *(m_Cfg + 1) = 250;
-        *(m_Cfg + 0) |= 8;
-        break;
+          m_FreqMin = 125000;
+          *(m_Cfg + 0) &= ~8;
+          *(m_Cfg + 1) = 250;
+          *(m_Cfg + 0) |= 8;
+          break;
         case 3:
-        m_FreqMin = 250000;
-        *(m_Cfg + 0) &= ~8;
-        *(m_Cfg + 1) = 125;
-        *(m_Cfg + 0) |= 8;
-        break;
+          m_FreqMin = 250000;
+          *(m_Cfg + 0) &= ~8;
+          *(m_Cfg + 1) = 125;
+          *(m_Cfg + 0) |= 8;
+          break;
       }
       break;
-    case 7:
-      // set RX frequency
-      value = *(uint32_t *)(message.constData() + 4);
-      if(value < 10000 || value > 50000000) break;
-      *(m_Cfg + 2) = (uint32_t)floor(value/125.0e6*(1<<30)+0.5);
-      break;
     case 8:
-      // set FFT frequency
-      value = *(uint32_t *)(message.constData() + 4);
-      if(value < m_FreqMin || value > 50000000) break;
-      *(m_Cfg + 3) = (uint32_t)floor(value/125.0e6*(1<<30)+0.5);
+      // set RX frequency
+      if(dataInt[0] < 10000 || dataInt[0] > 50000000) break;
+      *(m_Cfg + 2) = (uint32_t)floor(dataInt[0]/125.0e6*(1<<30)+0.5);
       break;
     case 9:
+      // set FFT frequency
+      if(dataInt[0] < m_FreqMin || dataInt[0] > 50000000) break;
+      *(m_Cfg + 3) = (uint32_t)floor(dataInt[0]/125.0e6*(1<<30)+0.5);
+      break;
+    case 10:
       // set TX frequency
-      value = *(uint32_t *)(message.constData() + 4);
-      if(value < 10000 || value > 50000000) break;
-      *(m_Cfg + 4) = (uint32_t)floor(value/125.0e6*(1<<30)+0.5);
+      if(dataInt[0] < 10000 || dataInt[0] > 50000000) break;
+      *(m_Cfg + 4) = (uint32_t)floor(dataInt[0]/125.0e6*(1<<30)+0.5);
+      break;
+    case 11:
+      // set RX mode
+      if(dataInt[0] < 0 || dataInt[0] > 11) break;
+      SetRXAMode(0, dataInt[0]);
+      break;
+    case 12:
+      // set TX mode
+      if(dataInt[0] < 0 || dataInt[0] > 11) break;
+      SetTXAMode(1, dataInt[0]);
+      break;
+    case 13:
+      // set RX filter
+      if(dataFloat[0] < -9.0e3 || dataInt[0] > 9.0e3) break;
+      if(dataFloat[1] < -9.0e3 || dataInt[1] > 9.0e3) break;
+      SetRXABandpassFreqs(0, dataFloat[0], dataFloat[1]);
+      break;
+    case 14:
+      // set TX filter
+      if(dataFloat[0] < -9.0e3 || dataInt[0] > 9.0e3) break;
+      if(dataFloat[1] < -9.0e3 || dataInt[1] > 9.0e3) break;
+      SetTXABandpassFreqs(1, dataFloat[0], dataFloat[1]);
+      break;
+    case 15:
+      // set RX AGC mode
+      if(dataInt[0] < 0 || dataInt[0] > 5) break;
+      SetRXAAGCMode(0, dataInt[0]);
+      break;
+    case 16:
+      // set RX AGC fixed gain
+      if(dataFloat[0] < 0.0 || dataFloat[0] > 120.0) break;
+      SetRXAAGCFixed(0, dataFloat[0]);
+      break;
+    case 17:
+      // set RX AGC top gain
+      if(dataFloat[0] < 0.0 || dataFloat[0] > 120.0) break;
+      SetRXAAGCTop(0, dataFloat[0]);
+      break;
+    case 18:
+      // set RX AGC slope
+      if(dataInt[0] < 0 || dataInt[0] > 20) break;
+      SetRXAAGCSlope(0, dataInt[0]);
+      break;
+    case 19:
+      // set RX AGC decay
+      if(dataInt[0] < 0 || dataInt[0] > 10000) break;
+      SetRXAAGCDecay(0, dataInt[0]);
+    case 20:
+      // set RX AGC hang
+      if(dataInt[0] < 0 || dataInt[0] > 10000) break;
+      SetRXAAGCHang(0, dataInt[0]);
+      break;
+    case 21:
+      // set RX AGC hang threshold
+      if(dataInt[0] < 0 || dataInt[0] > 100) break;
+      SetRXAAGCHangThreshold(0, dataInt[0]);
       break;
   }
 }
