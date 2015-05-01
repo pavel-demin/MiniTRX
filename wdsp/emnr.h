@@ -163,4 +163,6 @@ extern void flush_emnr (EMNR a);
 
 extern void xemnr (EMNR a, int pos);
 
+extern __declspec (dllexport) void SetRXAEMNRRun (int channel, int run);
+
 #endif
