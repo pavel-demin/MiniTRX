@@ -55,15 +55,20 @@ Item {
             if(mouseY < 0.5 * parent.height) {
               indicatorItem.tmp = indicator.value + indicatorItem.delta
               indicator.value = indicatorItem.tmp > 50000000 ? 50000000 : indicatorItem.tmp
-            } else {
+            } else if(Math.floor(indicator.value / indicatorItem.delta) > 0) {
               indicatorItem.tmp = indicator.value - indicatorItem.delta
               indicator.value = indicatorItem.tmp < 0 ? 0 : indicatorItem.tmp
             }
           }
 
           onWheel: {
-            indicatorItem.tmp = indicator.value + Math.floor(wheel.angleDelta.y / 90) * indicatorItem.delta
-            indicator.value = indicatorItem.tmp < 0 ? 0 : indicatorItem.tmp > 50000000 ? 50000000 : indicatorItem.tmp
+            if(wheel.angleDelta.y > 0) {
+              indicatorItem.tmp = indicator.value + Math.floor(wheel.angleDelta.y / 90) * indicatorItem.delta
+              indicator.value = indicatorItem.tmp > 50000000 ? 50000000 : indicatorItem.tmp
+            } else if(Math.floor(indicator.value / indicatorItem.delta) > 0) {
+              indicatorItem.tmp = indicator.value + Math.ceil(wheel.angleDelta.y / 90) * indicatorItem.delta
+              indicator.value = indicatorItem.tmp < 0 ? 0 : indicatorItem.tmp
+            }
           }
 
           onPositionChanged: {
