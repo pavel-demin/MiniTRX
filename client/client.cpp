@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include <QQuickItem>
+#include <QStringList>
 #include <QtMultimedia/QAudioDeviceInfo>
 #include <QtMultimedia/QAudioInput>
 #include <QtMultimedia/QAudioOutput>
@@ -86,6 +87,34 @@ Client::Client(QObject *parent):
 
 Client::~Client()
 {
+}
+
+//------------------------------------------------------------------------------
+
+QStringList Client::availableOutputDevices()
+{
+  QStringList list;
+  const QAudioDeviceInfo &defaultOutputDevice = QAudioDeviceInfo::defaultOutputDevice();
+  list << defaultOutputDevice.deviceName();
+  foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioOutput))
+  {
+    if(device != defaultOutputDevice) list << device.deviceName();
+  }
+  return list;
+}
+
+//------------------------------------------------------------------------------
+
+QStringList Client::availableInputDevices()
+{
+  QStringList list;
+  const QAudioDeviceInfo &defaultInputDevice = QAudioDeviceInfo::defaultInputDevice();
+  list << defaultInputDevice.deviceName();
+  foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioInput))
+  {
+    if(device != defaultInputDevice) list << device.deviceName();
+  }
+  return list;
 }
 
 //------------------------------------------------------------------------------

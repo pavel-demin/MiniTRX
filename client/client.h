@@ -2,6 +2,7 @@
 #define Client_h
 
 #include <QObject>
+#include <QStringList>
 
 class QByteArray;
 class QAudioFormat;
@@ -17,6 +18,9 @@ class Client: public QObject
 public:
   Client(QObject *parent = 0);
   virtual ~Client();
+
+  Q_INVOKABLE QStringList availableOutputDevices();
+  Q_INVOKABLE QStringList availableInputDevices();
 
 public slots:
   void on_Connect_clicked(QString address);
