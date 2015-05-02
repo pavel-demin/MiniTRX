@@ -12,6 +12,8 @@ int main(int argc, char *argv[])
 
   view.rootContext()->setContextProperty("client", &client);
   view.setSource(QUrl("qrc:/MiniTRX-client.qml"));
+  view.setMinimumSize(QSize(783, 500));
+  view.setMaximumSize(QSize(783, 500));
   view.show();
 
   return app.exec();
