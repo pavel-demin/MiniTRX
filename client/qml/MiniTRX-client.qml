@@ -2,13 +2,13 @@ import QtQuick 2.4
 import QtQuick.Controls 1.3
 
 Item {
-  width: 813
+  width: 783
   height: 500
 
   Rectangle {
     x: 5
     y: 5
-    width: 803
+    width: 773
     height: 245
     color: "#000000"
   }
@@ -16,7 +16,7 @@ Item {
   TabView {
     x: 5
     y: 250
-    width: 805
+    width: 775
     height: 245
 
     tabPosition: Qt.BottomEdge

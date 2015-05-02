@@ -8,7 +8,7 @@ Item {
   GroupBox {
     x: 5
     y: 5
-    width: 230
+    width: 220
     height: 210
     title: "RX"
 
@@ -31,55 +31,58 @@ Item {
     }
 
     Indicator {
-      x: 47
+      x: 42
       y: 5
     }
 
     ComboBox {
       x: 2
       y: 65
-      width: 100
+      width: 95
     }
 
     ComboBox {
-      x: 112
+      x: 107
       y: 65
-      width: 100
+      width: 95
     }
 
     ComboBox {
       x: 2
       y: 115
-      width: 210
+      width: 200
       height: 20
+      model: client.availableOutputDevices()
+      onCurrentIndexChanged: {
+      }
     }
 
     ProgressBar {
       x: 2
       y: 145
-      width: 210
+      width: 200
       height: 10
     }
 
     Slider {
       x: 2
       y: 165
-      width: 210
+      width: 200
       height: 20
     }
 
     Label {
       x: 2
       y: 45
-      width: 100
+      width: 95
       height: 15
       text: "Mode"
     }
 
     Label {
-      x: 112
+      x: 107
       y: 45
-      width: 100
+      width: 95
       height: 15
       text: "Filter"
     }
@@ -87,16 +90,16 @@ Item {
     Label {
       x: 2
       y: 95
-      width: 100
+      width: 95
       height: 15
       text: "Device"
     }
   }
 
   GroupBox {
-    x: 285
+    x: 275
     y: 5
-    width: 230
+    width: 220
     height: 210
     title: "TX"
 
@@ -119,55 +122,58 @@ Item {
     }
 
     Indicator {
-      x: 47
+      x: 42
       y: 5
     }
 
     ComboBox {
-      x: 112
+      x: 107
       y: 65
-      width: 100
+      width: 95
     }
 
     ComboBox {
       x: 2
       y: 65
-      width: 100
+      width: 95
     }
 
     ComboBox {
       x: 2
       y: 115
-      width: 210
+      width: 200
       height: 20
+      model: client.availableInputDevices()
+      onCurrentIndexChanged: {
+      }
     }
 
     ProgressBar {
       x: 2
       y: 145
-      width: 210
+      width: 200
       height: 10
     }
 
     Slider {
       x: 2
       y: 165
-      width: 210
+      width: 200
       height: 20
     }
 
     Label {
       x: 2
       y: 45
-      width: 100
+      width: 95
       height: 15
       text: "Mode"
     }
 
     Label {
-      x: 112
+      x: 107
       y: 45
-      width: 100
+      width: 95
       height: 15
       text: "Filter"
     }
@@ -175,16 +181,16 @@ Item {
     Label {
       x: 2
       y: 95
-      width: 100
+      width: 95
       height: 15
       text: "Device"
     }
   }
 
   GroupBox {
-    x: 565
+    x: 545
     y: 5
-    width: 230
+    width: 220
     height: 160
     title: "Spectrum"
 
@@ -207,42 +213,42 @@ Item {
     }
 
     Indicator {
-      x: 47
+      x: 42
       y: 5
     }
 
     ComboBox {
       x: 2
       y: 65
-      width: 100
+      width: 95
     }
 
     Slider {
-      x: 115
+      x: 107
       y: 65
-      width: 100
+      width: 95
       height: 20
     }
 
     Slider {
-      x: 115
+      x: 107
       y: 115
-      width: 100
+      width: 95
       height: 20
     }
 
     Label {
       x: 2
       y: 45
-      width: 100
+      width: 95
       height: 15
       text: "Bandwidth"
     }
 
     Label {
-      x: 112
+      x: 107
       y: 45
-      width: 100
+      width: 95
       height: 15
       text: "Range"
     }
@@ -250,22 +256,22 @@ Item {
     Label {
       x: 2
       y: 95
-      width: 100
+      width: 95
       height: 15
       text: "Freq. corr. (ppm)"
     }
 
     Label {
-      x: 115
+      x: 107
       y: 95
-      width: 100
+      width: 95
       height: 15
       text: "Offset"
     }
   }
 
   Button {
-    x: 245
+    x: 235
     y: 5
     width: 30
     height: 30
@@ -273,7 +279,7 @@ Item {
   }
 
   Button {
-    x: 245
+    x: 235
     y: 45
     width: 30
     height: 30
@@ -281,7 +287,7 @@ Item {
   }
 
   Button {
-    x: 525
+    x: 505
     y: 5
     width: 30
     height: 30
@@ -289,7 +295,7 @@ Item {
   }
 
   Button {
-    x: 525
+    x: 505
     y: 45
     width: 30
     height: 30
@@ -297,15 +303,15 @@ Item {
   }
 
   Label {
-    x: 565
-    y: 180
-    width: 100
+    x: 545
+    y: 175
+    width: 130
     height: 15
     text: "IP address"
   }
 
   TextField {
-    x: 565
+    x: 545
     y: 195
     width: 130
     height: 20
@@ -313,7 +319,7 @@ Item {
   }
 
   Button {
-    x: 715
+    x: 685
     y: 190
     width: 80
     height: 30
