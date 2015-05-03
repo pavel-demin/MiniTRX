@@ -1,22 +1,31 @@
 import QtQuick 2.4
 import QtQuick.Controls 1.3
+import MiniTRX 1.0
 
 Item {
-  width: 783
+  width: 782
   height: 500
 
-  Rectangle {
+  Spectrum {
+    objectName: "spectrum"
     x: 5
     y: 5
-    width: 773
-    height: 245
-    color: "#000000"
+    width: 772
+    height: 160
+  }
+
+  Waterfall {
+    objectName: "waterfall"
+    x: 5
+    y: 165
+    width: 772
+    height: 80
   }
 
   TabView {
     x: 5
     y: 250
-    width: 775
+    width: 774
     height: 245
 
     tabPosition: Qt.BottomEdge

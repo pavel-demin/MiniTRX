@@ -311,6 +311,7 @@ Item {
   }
 
   TextField {
+    id: address
     x: 545
     y: 195
     width: 130

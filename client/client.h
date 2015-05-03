@@ -11,6 +11,9 @@ class QAudioOutput;
 class QIODevice;
 class QWebSocket;
 
+class Spectrum;
+class Waterfall;
+
 class Client: public QObject
 {
   Q_OBJECT
@@ -18,6 +21,9 @@ class Client: public QObject
 public:
   Client(QObject *parent = 0);
   virtual ~Client();
+
+  void setSpectrum(Spectrum *spectrum) { m_Spectrum = spectrum; }
+  void setWaterfall(Waterfall *waterfall) { m_Waterfall = waterfall; }
 
   Q_INVOKABLE QStringList availableOutputDevices();
   Q_INVOKABLE QStringList availableInputDevices();
@@ -53,7 +59,8 @@ private slots:
 private:
   void sendCommand();
 
-  QObject *m_Root;
+  Spectrum *m_Spectrum;
+  Waterfall *m_Waterfall;
 
   QByteArray *m_BufferCmd;
   const char *m_PointerCmd;

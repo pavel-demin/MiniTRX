@@ -10,11 +10,13 @@
 #include <QtWebSockets/QWebSocket>
 
 #include "client.h"
+#include "spectrum.h"
+#include "waterfall.h"
 
 //------------------------------------------------------------------------------
 
 Client::Client(QObject *parent):
-  QObject(parent), m_Root(0),
+  QObject(parent), m_Spectrum(0), m_Waterfall(0),
 /*
   m_IndicatorRX(0), m_IndicatorTX(0), m_IndicatorFFT(0),
   m_LevelRX(0), m_LevelTX(0), m_Range(0), m_Offset(0), m_Plotter(0),
@@ -145,6 +147,22 @@ void Client::on_StopRX_clicked()
 
 //------------------------------------------------------------------------------
 
+void Client::on_StartFFT_clicked()
+{
+  *(uint32_t *)(m_PointerCmd + 0) = 3;
+  sendCommand();
+}
+
+//------------------------------------------------------------------------------
+
+void Client::on_StopFFT_clicked()
+{
+  *(uint32_t *)(m_PointerCmd + 0) = 4;
+  sendCommand();
+}
+
+//------------------------------------------------------------------------------
+
 void Client::on_StartTX_clicked()
 {
 }
@@ -152,18 +170,6 @@ void Client::on_StartTX_clicked()
 //------------------------------------------------------------------------------
 
 void Client::on_StopTX_clicked()
-{
-}
-
-//------------------------------------------------------------------------------
-
-void Client::on_StartFFT_clicked()
-{
-}
-
-//------------------------------------------------------------------------------
-
-void Client::on_StopFFT_clicked()
 {
 }
 
@@ -269,7 +275,20 @@ void Client::on_WebSocket_disconnected()
 
 void Client::on_WebSocket_binaryMessageReceived(QByteArray message)
 {
-  if(m_AudioOutputDevice) m_AudioOutputDevice->write(message.constData() + 4, 2048 * sizeof(int16_t));
+  int32_t command;
+  command = *(int32_t *)(message.constData() + 0);
+  switch(command)
+  {
+    case 0:
+      // RX data
+      if(m_AudioOutputDevice) m_AudioOutputDevice->write(message.constData() + 4, 2048 * sizeof(int16_t));
+      break;
+    case 1:
+      // FFT data
+      if(m_Spectrum) m_Spectrum->setData((uint8_t *)(message.constData() + 4));
+      if(m_Waterfall) m_Waterfall->setData((uint8_t *)(message.constData() + 4));
+      break;
+  }
 }
 
 //------------------------------------------------------------------------------
