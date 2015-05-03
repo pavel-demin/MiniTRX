@@ -38,7 +38,6 @@ private:
   int m_LimitTX, m_InputOffsetTX;
   QByteArray *m_InputBufferRX;
   QByteArray *m_OutputBufferRX;
-  QByteArray *m_InputBufferFFT;
   QByteArray *m_OutputBufferFFT;
   int32_t m_CounterRX;
   int16_t *m_PointerRX;

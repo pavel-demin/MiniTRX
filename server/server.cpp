@@ -1,12 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/ioctl.h>
+#include <math.h>
 
 #include <QtCore/QTimer>
 #include <QtCore/QCoreApplication>
@@ -34,7 +31,7 @@ Server::Server(int16_t port, QObject *parent):
   m_LimitRX(256), m_InputOffsetRX(0),
   m_LimitTX(0), m_InputOffsetTX(0),
   m_InputBufferRX(0), m_OutputBufferRX(0),
-  m_InputBufferFFT(0), m_OutputBufferFFT(0), 
+  m_OutputBufferFFT(0),
   m_CounterRX(0), m_PointerRX(0), m_FreqMin(25000),
   m_StateRX(0), m_DataRX(0),
   m_TimerRX(0), m_TimerFFT(0), m_TimerTX(0),
@@ -60,8 +57,11 @@ Server::Server(int16_t port, QObject *parent):
 
   /* enter reset mode */
   *(m_Cfg + 0) &= ~255;
+  /* set default rate */
+  *(m_Cfg + 1) = 1250;
   /* set default phase increment */
-  *(m_Cfg + 2) = (uint32_t)floor(621000/125.0e6*(1<<30)+0.5);
+  *(m_Cfg + 2) = uint32_t(floor(621000/125.0e6*(1<<30)+0.5));
+  *(m_Cfg + 3) = uint32_t(floor(610000/125.0e6*(1<<30)+0.5));
 
   pointerInt = m_BufferTX;
   for(i = 0; i < 512; ++i) *(pointerInt++) = 0;
@@ -73,7 +73,6 @@ Server::Server(int16_t port, QObject *parent):
   }
   OpenChannel(0, 256, 4096, 20000, 20000, 20000, 0, 0, 0.010, 0.025, 0.000, 0.010, 0);
   OpenChannel(1, 256, 4096, 20000, 20000, 20000, 1, 0, 0.010, 0.025, 0.000, 0.010, 0);
-  XCreateAnalyzer(0, &rc, 4096, 1, 1, 0);
   if((wisdomFile = fopen("wdsp-fftw-wisdom.txt", "w")))
   {
     fftwf_export_wisdom_to_file(wisdomFile);
@@ -86,19 +85,18 @@ Server::Server(int16_t port, QObject *parent):
   SetRXABandpassFreqs(0, -5000.0, 5000.0);
   SetRXAAGCFixed(0, 40.0);
   SetRXAAGCTop(0, 40.0);
-  SetRXAEMNRRun(0, 1);
+  SetRXAEMNRRun(0, 0);
 
   m_InputBufferRX = new QByteArray();
   m_InputBufferRX->resize(1590 * sizeof(float));
 
   m_OutputBufferRX = new QByteArray();
   m_OutputBufferRX->resize(2048 * sizeof(int16_t) + 4);
-
-  m_InputBufferFFT = new QByteArray();
-  m_InputBufferFFT->resize(8192 * sizeof(float));
+  *(uint32_t *)(m_OutputBufferRX->constData() + 0) = 0;
 
   m_OutputBufferFFT = new QByteArray();
-  m_OutputBufferFFT->resize(4096 * sizeof(float) + 4);
+  m_OutputBufferFFT->resize(4096 * sizeof(uint8_t) + 4);
+  *(uint32_t *)(m_OutputBufferFFT->constData() + 0) = 1;
 
   m_PointerRX = (int16_t *)(m_OutputBufferRX->constData() + 4);
 
@@ -118,8 +116,8 @@ Server::Server(int16_t port, QObject *parent):
   m_TimerRX = new QTimer(this);
   connect(m_TimerRX, SIGNAL(timeout()), this, SLOT(on_TimerRX_timeout()));
 
-  m_TimerRX = new QTimer(this);
-  connect(m_TimerRX, SIGNAL(timeout()), this, SLOT(on_TimerRX_timeout()));
+  m_TimerFFT = new QTimer(this);
+  connect(m_TimerFFT, SIGNAL(timeout()), this, SLOT(on_TimerFFT_timeout()));
 
   m_WebSocketServer = new QWebSocketServer(QString("SDR"), QWebSocketServer::NonSecureMode, this);
   if(m_WebSocketServer->listen(QHostAddress::Any, port))
@@ -164,7 +162,7 @@ void Server::on_TimerRX_timeout()
     pointerFloat = bufferFloat + 1024;
     for(i = 0; i < m_DataRX->output_frames_gen * 2; ++i)
     {
-      *(m_PointerRX++) = (int16_t)(*(pointerFloat++) * 32767.0);
+      *(m_PointerRX++) = int16_t(floor(*(pointerFloat++) * 32767.0 + 0.5));
       ++m_CounterRX;
       if(m_CounterRX == 2048)
       {
@@ -181,21 +179,28 @@ void Server::on_TimerRX_timeout()
 void Server::on_TimerFFT_timeout()
 {
   int32_t i;
-  int32_t *pointerInt;
-  float *pointerFloat;
-  int rc;
+  float re, im;
+  uint8_t *pointerInt;
 
-  pointerInt = m_BufferFFT;
-  pointerFloat = (float *)(m_InputBufferFFT->constData());
-  for(i = 0; i < 8192; ++i)
+  *(m_Cfg + 0) &= ~32;
+
+  pointerInt = (uint8_t *)(m_OutputBufferFFT->constData() + 4);
+  for(i = 2048; i < 4096; ++i)
   {
-    *(pointerFloat++) = ((float) *(pointerInt++)) / 2147483647.0;
+    re = float(*(m_BufferFFT + 2*i + 0))/2147483647.0;
+    im = float(*(m_BufferFFT + 2*i + 1))/2147483647.0;
+    *(pointerInt++) = uint8_t(floor(-20.0*log10(hypot(re, im)/2048.0) + 0.5));
   }
-  GetPixels(0, (float *)(m_OutputBufferFFT->constData() + 4), &rc);
-  if(rc && m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferFFT);
-  Spectrum2(0, 0, 0, pointerFloat);
-  *(m_Cfg + 0) &= ~16;
-  *(m_Cfg + 0) |= 16;
+  for(i = 0; i < 2048; ++i)
+  {
+    re = float(*(m_BufferFFT + 2*i + 0))/2147483647.0;
+    im = float(*(m_BufferFFT + 2*i + 1))/2147483647.0;
+    *(pointerInt++) = uint8_t(floor(-20.0*log10(hypot(re, im)/2048.0) + 0.5));
+  }
+
+  if(m_WebSocket) m_WebSocket->sendBinaryMessage(*m_OutputBufferFFT);
+
+  *(m_Cfg + 0) |= 32;
 }
 
 //------------------------------------------------------------------------------
@@ -241,8 +246,7 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
       break;
     case 3:
       // start FFT
-      *(m_Cfg + 0) |= 29;
-      SetAnalyzer(0, 1, 1, &flp, 4096, 4096, 4, 14.0, 0, 0, 0, 0, 600, 1, 0, 2, 0.8, 0, 0.0, 0.0, 0);
+      *(m_Cfg + 0) |= 61;
       m_TimerFFT->start(100);
       break;
     case 4:
@@ -291,17 +295,17 @@ void Server::on_WebSocket_binaryMessageReceived(QByteArray message)
     case 8:
       // set RX frequency
       if(dataInt[0] < 10000 || dataInt[0] > 50000000) break;
-      *(m_Cfg + 2) = (uint32_t)floor(dataInt[0]/125.0e6*(1<<30)+0.5);
+      *(m_Cfg + 2) = uint32_t(floor(dataInt[0]/125.0e6*(1<<30)+0.5));
       break;
     case 9:
       // set FFT frequency
       if(dataInt[0] < m_FreqMin || dataInt[0] > 50000000) break;
-      *(m_Cfg + 3) = (uint32_t)floor(dataInt[0]/125.0e6*(1<<30)+0.5);
+      *(m_Cfg + 3) = uint32_t(floor(dataInt[0]/125.0e6*(1<<30)+0.5));
       break;
     case 10:
       // set TX frequency
       if(dataInt[0] < 10000 || dataInt[0] > 50000000) break;
-      *(m_Cfg + 4) = (uint32_t)floor(dataInt[0]/125.0e6*(1<<30)+0.5);
+      *(m_Cfg + 4) = uint32_t(floor(dataInt[0]/125.0e6*(1<<30)+0.5));
       break;
     case 11:
       // set RX mode
@@ -380,7 +384,7 @@ void Server::on_TimerTX_timeout()
     bufferFloat = txa[1].outbuff + m_InputOffsetTX;
     for(i = 0; i < 512; ++i)
     {
-      *(pointerInt++) = (int32_t)(*(bufferFloat++) * 2147483647.0);
+      *(pointerInt++) = int32_t(*(bufferFloat++) * 2147483647.0);
     }
     m_InputOffsetTX += 256;
     if(m_InputOffsetTX == 4096)
