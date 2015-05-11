@@ -30,9 +30,7 @@ int main(int argc, char *argv[])
   Client client;
   QObject *rootObject = 0;
   Spectrum *spectrum = 0;
-  Waterfall *waterafll = 0;
-
-  qsrand(1);
+  Waterfall *waterfall = 0;
 
   qmlRegisterType<Spectrum>("MiniTRX", 1, 0, "Spectrum");
   qmlRegisterType<Waterfall>("MiniTRX", 1, 0, "Waterfall");
@@ -45,8 +43,8 @@ int main(int argc, char *argv[])
   spectrum = rootObject->findChild<Spectrum *>("spectrum");
   client.setSpectrum(spectrum);
 
-  waterafll = rootObject->findChild<Waterfall *>("waterfall");
-  client.setWaterfall(waterafll);
+  waterfall = rootObject->findChild<Waterfall *>("waterfall");
+  client.setWaterfall(waterfall);
 
   view.setMinimumSize(QSize(782, 500));
   view.setMaximumSize(QSize(782, 500));
