@@ -6,12 +6,16 @@ Item {
   width: 782
   height: 500
 
-  Spectrum {
-    objectName: "spectrum"
+  Rectangle {
     x: 5
     y: 5
     width: 772
     height: 160
+    color: "black"
+    Spectrum {
+      objectName: "spectrum"
+      anchors.fill: parent
+    }
   }
 
   Waterfall {

@@ -1,16 +1,17 @@
 #include <string.h>
 
-#include <QtGui/QPixmap>
-#include <QtGui/QPainter>
+#include <QtQuick/QSGNode>
+#include <QtQuick/QSGFlatColorMaterial>
 
 #include "spectrum.h"
+
+using namespace std;
 
 //------------------------------------------------------------------------------
 
 Spectrum::Spectrum(QQuickItem *parent):
-  QQuickPaintedItem(parent), m_Pixmap(0)
+  QQuickItem(parent), m_Width(0), m_Height(0)
 {
-  m_Pixmap = new QPixmap(0, 0);
   setFlag(ItemHasContents, true);
 }
 
@@ -18,39 +19,28 @@ Spectrum::Spectrum(QQuickItem *parent):
 
 Spectrum::~Spectrum()
 {
-  if(m_Pixmap) delete m_Pixmap;
 }
 
 //------------------------------------------------------------------------------
 
 void Spectrum::setData(unsigned char *data)
 {
-  QPainter painter;
-  int i, width, height;
+  int i;
   int x, xnew;
   int y, ynew;
-  QPoint curve[4096];
-
-  width = m_Pixmap->width();
-  height = m_Pixmap->height();
-
-  m_Pixmap->fill(Qt::black);
-
-  painter.begin(m_Pixmap);
-  painter.setPen(Qt::yellow);
 
   x = 0;
-  y = height;
+  y = m_Height;
+  m_Data.clear();
   for(i = 0; i < 4096; ++i)
   {
-    xnew = (i * width) >> 12;
-    ynew = (data[i] * height) >> 8;
+    xnew = (i * m_Width) >> 12;
+    ynew = (data[i] * m_Height) >> 8;
     if(xnew > x)
     {
-      curve[x].setX(x);
-      curve[x].setY(y);
+      m_Data.push_back(y);
       x = xnew;
-      y = height;
+      y = m_Height;
     }
     else if(ynew < y)
     {
@@ -58,24 +48,60 @@ void Spectrum::setData(unsigned char *data)
     }
   }
 
-  painter.drawPolyline(curve, width - 1);
-
   update();
 }
 
 //------------------------------------------------------------------------------
 
-void Spectrum::paint(QPainter *painter)
+QSGNode *Spectrum::updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *data)
 {
-  QRectF bounds = boundingRect();
-  QSize size = m_Pixmap->size();
+  int i;
+  float x, y;
+  QSGGeometryNode *node = 0;
+  QSGGeometry *geometry = 0;
+  QSGFlatColorMaterial *material = 0;
+  QSGGeometry::Point2D *vertices = 0;
 
-  if(size.width() != bounds.width() || size.height() != bounds.height())
+  QRectF bounds = boundingRect();
+
+  m_Width = bounds.width();
+  m_Height = bounds.height();
+  x = bounds.x();
+  y = bounds.y();
+
+  if(!oldNode)
   {
-    delete m_Pixmap;
-    m_Pixmap = new QPixmap(bounds.width(), bounds.height());
-    m_Pixmap->fill(Qt::black);
+    node = new QSGGeometryNode;
+    geometry = new QSGGeometry(QSGGeometry::defaultAttributes_Point2D(), m_Width - 1);
+    geometry->setLineWidth(1);
+    geometry->setDrawingMode(GL_LINE_STRIP);
+    node->setGeometry(geometry);
+    node->setFlag(QSGNode::OwnsGeometry);
+    material = new QSGFlatColorMaterial;
+    material->setColor(Qt::yellow);
+    node->setMaterial(material);
+    node->setFlag(QSGNode::OwnsMaterial);
+  }
+  else
+  {
+    node = static_cast<QSGGeometryNode *>(oldNode);
+    geometry = node->geometry();
+    geometry->allocate(m_Width - 1);
   }
 
-  painter->drawPixmap(bounds, *m_Pixmap, bounds);
+  if(m_Data.size() < m_Width - 1)
+  {
+    m_Data.resize(m_Width - 1, 0.0);
+  }
+
+  vertices = geometry->vertexDataAsPoint2D();
+
+  for(i = 0; i < m_Width - 1; ++i)
+  {
+    vertices[i].set(x + float(i), y + m_Data[i]);
+  }
+
+  node->markDirty(QSGNode::DirtyGeometry);
+
+  return node;
 }

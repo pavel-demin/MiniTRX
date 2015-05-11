@@ -1,11 +1,11 @@
 #ifndef Spectrum_h
 #define Spectrum_h
 
-#include <QQuickPaintedItem>
+#include <vector>
 
-class QPixmap;
+#include <QQuickItem>
 
-class Spectrum: public QQuickPaintedItem
+class Spectrum: public QQuickItem
 {
   Q_OBJECT
 
@@ -15,10 +15,11 @@ public:
 
   void setData(unsigned char *data);
 
-  void paint(QPainter *painter);
+  QSGNode *updatePaintNode(QSGNode *oldNode, UpdatePaintNodeData *data);
 
 private:
-  QPixmap *m_Pixmap;
+  std::vector<float> m_Data;
+  int m_Width, m_Height;
 };
 
 #endif
