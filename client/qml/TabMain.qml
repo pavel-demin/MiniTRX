@@ -22,6 +22,7 @@ Item {
       onClicked: {
         if(checked) {
           text = "OFF"
+          client.on_IndicatorRX_changed(indicatorRX.value)
           client.on_StartRX_clicked()
         } else {
           text = "ON"
@@ -31,8 +32,12 @@ Item {
     }
 
     Indicator {
+      id: indicatorRX
       x: 42
       y: 5
+      onValueChanged: {
+        client.on_IndicatorRX_changed(value)
+      }
     }
 
     ComboBox {
@@ -52,8 +57,9 @@ Item {
       y: 115
       width: 200
       height: 20
-      model: client.availableOutputDevices()
+      model: client.outputDeviceList()
       onCurrentIndexChanged: {
+        client.on_OutputDevice_changed(currentIndex)
       }
     }
 
@@ -113,6 +119,7 @@ Item {
       onClicked: {
         if(checked) {
           text = "OFF"
+          client.on_IndicatorTX_changed(indicatorTX.value)
           client.on_StartTX_clicked()
         } else {
           text = "ON"
@@ -122,8 +129,12 @@ Item {
     }
 
     Indicator {
+      id: indicatorTX
       x: 42
       y: 5
+      onValueChanged: {
+        client.on_IndicatorTX_changed(value)
+      }
     }
 
     ComboBox {
@@ -143,8 +154,9 @@ Item {
       y: 115
       width: 200
       height: 20
-      model: client.availableInputDevices()
+      model: client.inputDeviceList()
       onCurrentIndexChanged: {
+        client.on_InputDevice_changed(currentIndex)
       }
     }
 
@@ -204,6 +216,7 @@ Item {
       onClicked: {
         if(checked) {
           text = "OFF"
+          client.on_IndicatorFFT_changed(indicatorFFT.value)
           client.on_StartFFT_clicked()
         } else {
           text = "ON"
@@ -213,8 +226,12 @@ Item {
     }
 
     Indicator {
+      id: indicatorFFT
       x: 42
       y: 5
+      onValueChanged: {
+        client.on_IndicatorFFT_changed(value)
+      }
     }
 
     ComboBox {

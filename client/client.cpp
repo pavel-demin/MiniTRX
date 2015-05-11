@@ -41,14 +41,16 @@ Client::Client(QObject *parent):
   m_Address(0), m_Connect(0), m_EnableRX(0), m_EnableTX(0), m_EnableFFT(0),
   m_InputDevice(0), m_OutputDevice(0),
 */
-  m_BufferCmd(0), m_PointerCmd(0),
+  m_BufferCmd(0), m_Command(0), m_DataInt(0), m_DataFloat(0),
   m_AudioFormat(0), m_AudioInput(0), m_AudioOutput(0),
   m_AudioInputDevice(0), m_AudioOutputDevice(0),
   m_WebSocket(0)
 {
   m_BufferCmd = new QByteArray();
   m_BufferCmd->resize(48);
-  m_PointerCmd = m_BufferCmd->constData();
+  m_Command = (int32_t *)(m_BufferCmd->constData() + 0);
+  m_DataInt = (int32_t *)(m_BufferCmd->constData() + 4);
+  m_DataFloat = (float *)(m_BufferCmd->constData() + 4);
 /*
   m_LevelRX = findChild<QProgressBar *>("LevelRX");
   m_LevelTX = findChild<QProgressBar *>("LevelTX");
@@ -74,29 +76,33 @@ Client::Client(QObject *parent):
   m_AudioFormat->setSampleType(QAudioFormat::SignedInt);
 
   const QAudioDeviceInfo &defaultOutputDevice = QAudioDeviceInfo::defaultOutputDevice();
-/*
-  m_OutputDevice = findChild<QComboBox *>("OutputDevice");
-  m_OutputDevice->addItem(defaultOutputDevice.deviceName(), qVariantFromValue(defaultOutputDevice));
+  m_OutputDeviceList << defaultOutputDevice.deviceName();
+  m_OutputDeviceInfoList << defaultOutputDevice;
   foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioOutput))
   {
-    if(device != defaultOutputDevice) m_OutputDevice->addItem(device.deviceName(), qVariantFromValue(device));
+    if(device != defaultOutputDevice)
+    {
+      m_OutputDeviceList << device.deviceName();
+      m_OutputDeviceInfoList << device;
+    }
   }
-  connect(m_OutputDevice, SIGNAL(activated(int)), this, SLOT(on_OutputDevice_activated(int)));
-*/
   m_AudioOutput = new QAudioOutput(defaultOutputDevice, *m_AudioFormat, this);
   m_AudioOutput->setBufferSize(16384);
 
+  QStringList list;
   const QAudioDeviceInfo &defaultInputDevice = QAudioDeviceInfo::defaultInputDevice();
-/*
-  m_InputDevice = findChild<QComboBox *>("InputDevice");
-  m_InputDevice->addItem(defaultInputDevice.deviceName(), qVariantFromValue(defaultInputDevice));
+  m_InputDeviceList << defaultInputDevice.deviceName();
+  m_InputDeviceInfoList << defaultInputDevice;
   foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioInput))
   {
-    if(device != defaultInputDevice) m_InputDevice->addItem(device.deviceName(), qVariantFromValue(device));
+    if(device != defaultInputDevice)
+    {
+      m_InputDeviceList << device.deviceName();
+      m_InputDeviceInfoList << device;
+    }
   }
-  connect(m_InputDevice, SIGNAL(activated(int)), this, SLOT(on_InputDevice_activated(int)));
-*/
   m_AudioInput = new QAudioInput(defaultInputDevice, *m_AudioFormat, this);
+  m_AudioInput->setBufferSize(16384);
 
   m_WebSocket = new QWebSocket();
   connect(m_WebSocket, SIGNAL(connected()), this, SLOT(on_WebSocket_connected()));
@@ -111,30 +117,16 @@ Client::~Client()
 
 //------------------------------------------------------------------------------
 
-QStringList Client::availableOutputDevices()
+QStringList Client::outputDeviceList()
 {
-  QStringList list;
-  const QAudioDeviceInfo &defaultOutputDevice = QAudioDeviceInfo::defaultOutputDevice();
-  list << defaultOutputDevice.deviceName();
-  foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioOutput))
-  {
-    if(device != defaultOutputDevice) list << device.deviceName();
-  }
-  return list;
+  return m_OutputDeviceList;
 }
 
 //------------------------------------------------------------------------------
 
-QStringList Client::availableInputDevices()
+QStringList Client::inputDeviceList()
 {
-  QStringList list;
-  const QAudioDeviceInfo &defaultInputDevice = QAudioDeviceInfo::defaultInputDevice();
-  list << defaultInputDevice.deviceName();
-  foreach(const QAudioDeviceInfo &device, QAudioDeviceInfo::availableDevices(QAudio::AudioInput))
-  {
-    if(device != defaultInputDevice) list << device.deviceName();
-  }
-  return list;
+  return m_InputDeviceList;
 }
 
 //------------------------------------------------------------------------------
@@ -149,7 +141,7 @@ void Client::sendCommand()
 void Client::on_StartRX_clicked()
 {
   m_AudioOutputDevice = m_AudioOutput->start();
-  *(uint32_t *)(m_PointerCmd + 0) = 1;
+  *m_Command = 1;
   sendCommand();
 }
 
@@ -157,7 +149,7 @@ void Client::on_StartRX_clicked()
 
 void Client::on_StopRX_clicked()
 {
-  *(uint32_t *)(m_PointerCmd + 0) = 2;
+  *m_Command = 2;
   sendCommand();
   m_AudioOutput->stop();
   m_AudioOutputDevice = 0;
@@ -167,7 +159,7 @@ void Client::on_StopRX_clicked()
 
 void Client::on_StartFFT_clicked()
 {
-  *(uint32_t *)(m_PointerCmd + 0) = 3;
+  *m_Command = 3;
   sendCommand();
 }
 
@@ -175,7 +167,7 @@ void Client::on_StartFFT_clicked()
 
 void Client::on_StopFFT_clicked()
 {
-  *(uint32_t *)(m_PointerCmd + 0) = 4;
+  *m_Command = 4;
   sendCommand();
 }
 
@@ -191,76 +183,6 @@ void Client::on_StopTX_clicked()
 {
 }
 
-//------------------------------------------------------------------------------
-/*
-void Client::on_EnableRX_clicked()
-{
-  if(m_EnableRX->isChecked())
-  {
-    *(uint32_t *)(m_PointerCmd + 0) = 1;
-    m_EnableRX->setText(QString("OFF"));
-    m_AudioOutputDevice = m_AudioOutput->start();
-  }
-  else
-  {
-    *(uint32_t *)(m_PointerCmd + 0) = 2;
-    m_EnableRX->setText(QString("ON"));
-    m_AudioOutput->stop();
-    m_AudioOutputDevice = 0;
-  }
-  SendCommand();
-}
-
-//------------------------------------------------------------------------------
-
-void Client::on_EnableFFT_clicked()
-{
-  if(m_EnableFFT->isChecked())
-  {
-    *(uint32_t *)(m_PointerCmd + 0) = 3;
-    m_EnableFFT->setText(QString("OFF"));
-  }
-  else
-  {
-    *(uint32_t *)(m_PointerCmd + 0) = 4;
-    m_EnableFFT->setText(QString("ON"));
-  }
-  SendCommand();
-}
-
-//------------------------------------------------------------------------------
-
-void Client::on_EnableTX_clicked()
-{
-  if(m_EnableTX->isChecked())
-  {
-    *(uint32_t *)(m_PointerCmd + 0) = 5;
-    m_EnableTX->setText(QString("OFF"));
-  }
-  else
-  {
-    *(uint32_t *)(m_PointerCmd + 0) = 6;
-    m_EnableTX->setText(QString("ON"));
-  }
-  SendCommand();
-}
-*/
-//------------------------------------------------------------------------------
-/*
-void Client::on_Connect_clicked()
-{
-  if(m_Connect->isChecked())
-  {
-    m_WebSocket->open(QString("ws://") + m_Address->text() + QString(":1001"));
-    m_Connect->setText(QString("Disconnect"));
-  }
-  else
-  {
-    m_WebSocket->close();
-    m_Connect->setText(QString("Connect"));
-  }
-}
-*/
 //------------------------------------------------------------------------------
 
 void Client::on_Connect_clicked(QString address)
@@ -311,42 +233,34 @@ void Client::on_WebSocket_binaryMessageReceived(QByteArray message)
 
 //------------------------------------------------------------------------------
 
-/*
-void Client::on_Quit_clicked()
+void Client::on_OutputDevice_changed(int index)
 {
-  qApp->quit();
-}
+  bool active = m_AudioOutputDevice;
+  const QAudioDeviceInfo &device = m_OutputDeviceInfoList[index];
 
-*/
+  if(active) on_StopRX_clicked();
 
-//------------------------------------------------------------------------------
-
-void Client::on_OutputDevice_activated(int index)
-{
-/*
-  const QAudioDeviceInfo &device = m_OutputDevice->itemData(index).value<QAudioDeviceInfo>();
-  m_AudioOutput->stop();
-  m_AudioOutput->disconnect(this);
   delete m_AudioOutput;
   m_AudioOutput = new QAudioOutput(device, *m_AudioFormat, this);
-  m_AudioOutputDevice = m_AudioOutput->start();
-  connect(m_AudioOutput, SIGNAL(notify()), this, SLOT(on_AudioOutput_notify()));
-*/
+  m_AudioOutput->setBufferSize(16384);
+
+  if(active) on_StartRX_clicked();
 }
 
 //------------------------------------------------------------------------------
 
-void Client::on_InputDevice_activated(int index)
+void Client::on_InputDevice_changed(int index)
 {
-/*
-  const QAudioDeviceInfo &device = m_InputDevice->itemData(index).value<QAudioDeviceInfo>();
-  m_AudioInput->stop();
-  m_AudioInput->disconnect(this);
+  bool active = m_AudioInputDevice;
+  const QAudioDeviceInfo &device = m_InputDeviceInfoList[index];
+
+  if(active) on_StopTX_clicked();
+
   delete m_AudioInput;
   m_AudioInput = new QAudioInput(device, *m_AudioFormat, this);
-  m_AudioInputDevice = m_AudioInput->start();
-  connect(m_AudioInput, SIGNAL(notify()), this, SLOT(on_AudioInput_notify()));
-*/
+  m_AudioInput->setBufferSize(16384);
+
+  if(active) on_StartTX_clicked();
 }
 
 //------------------------------------------------------------------------------
@@ -362,43 +276,34 @@ void Client::on_AudioOutput_notify()
 }
 
 //------------------------------------------------------------------------------
-/*
+
 void Client::on_IndicatorRX_changed(int freq)
 {
-  m_Plotter->SetDemodCenterFreq(freq);
-  m_Plotter->UpdateOverlay();
-  *(uint32_t *)(m_PointerCmd + 0) = 8;
-  *(uint32_t *)(m_PointerCmd + 4) = freq;
-  SendCommand();
-}
-
-//------------------------------------------------------------------------------
-
-void Client::on_FrequencyRX_changed(int freq)
-{
-  m_IndicatorRX->setValue(freq);
+  *m_Command = 8;
+  m_DataInt[0] = freq;
+  sendCommand();
 }
 
 //------------------------------------------------------------------------------
 
 void Client::on_IndicatorFFT_changed(int freq)
 {
-  m_Plotter->SetCenterFreq(freq);
-  m_Plotter->UpdateOverlay();
-  *(uint32_t *)(m_PointerCmd + 0) = 8;
-  *(uint32_t *)(m_PointerCmd + 4) = freq;
+  *m_Command = 9;
+  m_DataInt[0] = freq;
+  sendCommand();
 }
 
 //------------------------------------------------------------------------------
 
 void Client::on_IndicatorTX_changed(int freq)
 {
-  *(uint32_t *)(m_PointerCmd + 0) = 9;
-  *(uint32_t *)(m_PointerCmd + 4) = freq;
+  *m_Command = 10;
+  m_DataInt[0] = freq;
+  sendCommand();
 }
 
 //------------------------------------------------------------------------------
-
+/*
 void Client::on_Range_changed(int range)
 {
   int step = 10;
