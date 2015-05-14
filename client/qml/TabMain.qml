@@ -333,7 +333,7 @@ Item {
     y: 195
     width: 130
     height: 20
-    text: "192.168.1.5"
+    text: "192.168.1.4"
   }
 
   Button {

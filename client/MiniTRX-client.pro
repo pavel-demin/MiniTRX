@@ -7,5 +7,5 @@ OBJECTS_DIR = build
 MOC_DIR = build
 RCC_DIR = build
 RESOURCES = qml/MiniTRX-client.qrc
-HEADERS = client.h spectrum.h waterfall.h
-SOURCES = client.cpp spectrum.cpp waterfall.cpp main.cpp
+HEADERS = client.h grid.h spectrum.h waterfall.h
+SOURCES = client.cpp grid.cpp spectrum.cpp waterfall.cpp main.cpp

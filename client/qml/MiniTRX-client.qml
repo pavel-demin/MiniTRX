@@ -12,6 +12,9 @@ Item {
     width: 772
     height: 160
     color: "black"
+    Grid {
+      anchors.fill: parent
+    }
     Spectrum {
       objectName: "spectrum"
       anchors.fill: parent

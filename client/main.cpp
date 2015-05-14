@@ -20,6 +20,7 @@
 #include <QtQuick>
 
 #include "client.h"
+#include "grid.h"
 #include "spectrum.h"
 #include "waterfall.h"
 
@@ -32,6 +33,7 @@ int main(int argc, char *argv[])
   Spectrum *spectrum = 0;
   Waterfall *waterfall = 0;
 
+  qmlRegisterType<Grid>("MiniTRX", 1, 0, "Grid");
   qmlRegisterType<Spectrum>("MiniTRX", 1, 0, "Spectrum");
   qmlRegisterType<Waterfall>("MiniTRX", 1, 0, "Waterfall");
 
