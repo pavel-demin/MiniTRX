@@ -220,4 +220,6 @@ void SnapSpectrum(	int disp,
 					int LO,
 					float *snap_buff);
 
+extern __declspec( dllexport )
+void new_window(int disp, int type, int size, float PiAlpha);
 #endif

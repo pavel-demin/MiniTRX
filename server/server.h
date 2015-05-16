@@ -51,7 +51,8 @@ private slots:
 private:
   uint32_t *m_Cfg;
   uint16_t *m_Sts;
-  int32_t *m_BufferRX, *m_BufferTX, *m_BufferFFT;
+  float *m_BufferRX, *m_BufferTX, *m_BufferFFT;
+  int32_t *m_BufferWIN;
   int m_LimitRX, m_InputOffsetRX;
   int m_LimitTX, m_InputOffsetTX;
   QByteArray *m_InputBufferRX;
