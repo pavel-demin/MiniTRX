@@ -143,6 +143,24 @@ void print_peak_env_f2 (const char* filename, int N, float* Ibuff, float* Qbuff)
 	fclose (file);
 }
 
+void print_iqc_values (const char* filename, int state, float env_in, float I, float Q, float ym, float yc, float ys, float thresh)
+{
+	static unsigned int seqnum;
+	float env_out;
+	FILE* file;
+	env_out = sqrt (I * I + Q * Q);
+	if (env_out > thresh)
+	{
+		file = fopen(filename, "a");
+		if (seqnum == 0)
+			fprintf(file, "seqnum\tstate\tenv_in\t\tenv_out\t\tym\t\tyc\t\tys\n");
+		fprintf(file, "%d\t%d\t%f\t%f\t%f\t%f\t%f\n", seqnum, state, env_in, env_out, ym, yc, ys);
+		fflush(file);
+		fclose(file);
+		seqnum++;
+	}
+}
+
 PORT
 void print_buffer_parameters (const char* filename, int channel)
 {
