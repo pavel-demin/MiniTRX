@@ -1,4 +1,6 @@
 
+#include <QtCore/qmath.h>
+#include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
 #include <QtGui/QMouseEvent>
 
@@ -19,6 +21,13 @@ class CustomDigit: public QLabel
 {
 public:
   CustomDigit(QWidget *parent = 0): QLabel(parent), m_Active(true), m_State(0), m_Delta(0) {}
+
+  void resizeEvent(QResizeEvent *event)
+  {
+    QFont f = font();
+    f.setPixelSize(height());
+    setFont(f);
+  }
 
   void mouseMoveEvent(QMouseEvent *event)
   {
@@ -85,24 +94,28 @@ public:
 Indicator::Indicator(QWidget *parent):
   QFrame(parent)
 {
+  QHBoxLayout *layout;
   CustomDigit *digit;
-  int i, x, delta;
-  QFont font("Arial", 21, QFont::Normal);
-  x = 143;
-  delta = 1;
-  for(i = 0; i < 8; ++i)
+  int i;
+  QFont font("Arial");
+  layout = new QHBoxLayout(this);
+  layout->setContentsMargins(1, 1, 1, 1);
+  layout->setSpacing(1);
+  setLayout(layout);
+  layout->addStretch();
+  for(i = 8; i > 0; --i)
   {
     digit = new CustomDigit(this);
     digit->setText(QString::number(0));
     digit->setAlignment(Qt::AlignCenter);
     digit->setFont(font);
-    digit->setGeometry(QRect(x, 2, 18, 27));
+    layout->addWidget(digit);
     digit->setMouseTracking(true);
-    digit->m_Delta = delta;
+    digit->m_Delta = (int)(qPow(10.0, i - 1) + 0.5);
     digit->m_Indicator = this;
-    x -= (i % 3 == 2) ? 23 : 18;
-    delta *= 10;
+    if(i > 1 && i % 3 == 1) layout->addStretch();
   }
+  layout->addStretch();
 }
 
 //------------------------------------------------------------------------------
@@ -120,7 +133,7 @@ void Indicator::setValue(int value)
   if(value < 0 && value > 50000000) return;
   foreach(CustomDigit *digit, findChildren<CustomDigit *>())
   {
-    quotient = value/digit->m_Delta;
+    quotient = value / digit->m_Delta;
     palette = digit->palette();
     if(quotient == 0)
     {
@@ -162,7 +175,7 @@ void Indicator::setDeltaMin(int delta)
 void Indicator::applyDelta(int delta)
 {
   int value = m_Value + delta;
-  if(delta < 0 && value < 0) value = 0;
-  if(delta > 0 && value > 50000000) value = 50000000;
+  if(delta < 0 && value < 0) return;
+  if(delta > 0 && value > 50000000) return;
   setValue(value);
 }
