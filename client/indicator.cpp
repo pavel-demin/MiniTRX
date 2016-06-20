@@ -34,7 +34,7 @@ public:
     if(!m_Active) return;
     QPalette pal;
     QColor color = palette().color(QPalette::WindowText);
-    if(event->y() < height()/2 && m_State != 1)
+    if(event->y() < height() / 2 && m_State != 1)
     {
       m_State = 1;
       setStyleSheet(c_StyleSheets[1]);
@@ -42,7 +42,7 @@ public:
       pal.setColor(QPalette::WindowText, color);
       setPalette(pal);
     }
-    if(event->y() > height()/2 && m_State != 2)
+    if(event->y() > height() / 2 && m_State != 2)
     {
       m_State = 2;
       setStyleSheet(c_StyleSheets[2]);
@@ -67,11 +67,11 @@ public:
   void mousePressEvent(QMouseEvent *event)
   {
     if(!m_Active) return;
-    if(event->y() < height()/2)
+    if(event->y() < height() / 2)
     {
       m_Indicator->applyDelta(m_Delta);
     }
-    if(event->y() > height()/2)
+    if(event->y() > height() / 2)
     {
       m_Indicator->applyDelta(-m_Delta);
     }
@@ -80,7 +80,7 @@ public:
   void wheelEvent(QWheelEvent *event)
   {
     if(!m_Active) return;
-    m_Indicator->applyDelta(event->delta()/90*m_Delta);
+    m_Indicator->applyDelta(event->delta() / 90 * m_Delta);
   }
 
   bool m_Active;
@@ -92,30 +92,13 @@ public:
 //------------------------------------------------------------------------------
 
 Indicator::Indicator(QWidget *parent):
-  QFrame(parent)
+  QFrame(parent), m_Layout(0), m_Font(),
+  m_Value(0), m_ValueMin(0), m_ValueMax(0)
 {
-  QHBoxLayout *layout;
-  CustomDigit *digit;
-  int i;
-  QFont font("Arial");
-  layout = new QHBoxLayout(this);
-  layout->setContentsMargins(1, 1, 1, 1);
-  layout->setSpacing(1);
-  setLayout(layout);
-  layout->addStretch();
-  for(i = 8; i > 0; --i)
-  {
-    digit = new CustomDigit(this);
-    digit->setText(QString::number(0));
-    digit->setAlignment(Qt::AlignCenter);
-    digit->setFont(font);
-    layout->addWidget(digit);
-    digit->setMouseTracking(true);
-    digit->m_Delta = (int)(qPow(10.0, i - 1) + 0.5);
-    digit->m_Indicator = this;
-    if(i > 1 && i % 3 == 1) layout->addStretch();
-  }
-  layout->addStretch();
+  m_Layout = new QHBoxLayout(this);
+  m_Layout->setContentsMargins(1, 1, 1, 1);
+  m_Layout->setSpacing(1);
+  setLayout(m_Layout);
 }
 
 //------------------------------------------------------------------------------
@@ -126,11 +109,56 @@ Indicator::~Indicator()
 
 //------------------------------------------------------------------------------
 
+void Indicator::setFont(QFont font)
+{
+  m_Font = font;
+  foreach(CustomDigit *digit, findChildren<CustomDigit *>())
+  {
+    digit->setFont(font);
+  }
+}
+
+//------------------------------------------------------------------------------
+
+void Indicator::setSize(int size)
+{
+  int i;
+  CustomDigit *digit;
+  QLayoutItem *item;
+
+  while((digit = findChild<CustomDigit *>()))
+  {
+    delete digit;
+  }
+  while((item = m_Layout->takeAt(0)))
+  {
+    delete item;
+  }
+
+  m_Layout->addStretch();
+  for(i = size; i > 0; --i)
+  {
+    digit = new CustomDigit(this);
+    digit->setText(QString::number(0));
+    digit->setAlignment(Qt::AlignCenter);
+    digit->setFont(m_Font);
+    m_Layout->addWidget(digit);
+    digit->setMouseTracking(true);
+    digit->m_Delta = (int)(qPow(10.0, i - 1) + 0.5);
+    digit->m_Indicator = this;
+    if(i > 1 && i % 3 == 1) m_Layout->addStretch();
+  }
+  m_Layout->addStretch();
+  setValue(m_Value);
+}
+
+//------------------------------------------------------------------------------
+
 void Indicator::setValue(int value)
 {
   int quotient;
   QPalette palette;
-  if(value < 0 && value > 50000000) return;
+  if(value < m_ValueMin && value > m_ValueMax) return;
   foreach(CustomDigit *digit, findChildren<CustomDigit *>())
   {
     quotient = value / digit->m_Delta;
@@ -144,10 +172,28 @@ void Indicator::setValue(int value)
       palette.setColor(QPalette::WindowText, QColor(Qt::black));
     }
     digit->setPalette(palette);
-    digit->setText(QString::number(quotient%10));
+    digit->setText(QString::number(quotient % 10));
   }
   m_Value = value;
   emit valueChanged(value);
+}
+
+//------------------------------------------------------------------------------
+
+void Indicator::setValueMin(int value)
+{
+  if(value > m_ValueMax) return;
+  m_ValueMin = value;
+  if(m_Value < value) setValue(value);
+}
+
+//------------------------------------------------------------------------------
+
+void Indicator::setValueMax(int value)
+{
+  if(value < m_ValueMin) return;
+  m_ValueMax = value;
+  if(m_Value > value) setValue(value);
 }
 
 //------------------------------------------------------------------------------
@@ -175,7 +221,7 @@ void Indicator::setDeltaMin(int delta)
 void Indicator::applyDelta(int delta)
 {
   int value = m_Value + delta;
-  if(delta < 0 && value < 0) return;
-  if(delta > 0 && value > 50000000) return;
+  if(delta < 0 && value < m_ValueMin) return;
+  if(delta > 0 && value > m_ValueMax) return;
   setValue(value);
 }

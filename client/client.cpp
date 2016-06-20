@@ -95,12 +95,21 @@ Client::Client(QWidget *parent):
   connect(m_Range, SIGNAL(valueChanged(int)), this, SLOT(on_Range_changed(int)));
   connect(m_Offset, SIGNAL(valueChanged(int)), this, SLOT(on_Offset_changed(int)));
 
+  m_IndicatorRX->setSize(8);
+  m_IndicatorRX->setValueMin(0);
+  m_IndicatorRX->setValueMax(50000000);
   m_IndicatorRX->setValue(600000);
   m_IndicatorRX->setFrameShape(QFrame::Panel);
   m_IndicatorRX->setFrameShadow(QFrame::Sunken);
+  m_IndicatorTX->setSize(8);
+  m_IndicatorTX->setValueMin(0);
+  m_IndicatorTX->setValueMax(50000000);
   m_IndicatorTX->setValue(600000);
   m_IndicatorTX->setFrameShape(QFrame::Panel);
   m_IndicatorTX->setFrameShadow(QFrame::Sunken);
+  m_IndicatorFFT->setSize(8);
+  m_IndicatorFFT->setValueMin(0);
+  m_IndicatorFFT->setValueMax(50000000);
   m_IndicatorFFT->setValue(600000);
   m_IndicatorFFT->setFrameShape(QFrame::Panel);
   m_IndicatorFFT->setFrameShadow(QFrame::Sunken);
