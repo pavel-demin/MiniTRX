@@ -158,7 +158,7 @@ void Indicator::setValue(int value)
 {
   int quotient;
   QPalette palette;
-  if(value < m_ValueMin && value > m_ValueMax) return;
+  if(value < m_ValueMin || value > m_ValueMax) return;
   foreach(CustomDigit *digit, findChildren<CustomDigit *>())
   {
     quotient = value / digit->m_Delta;
